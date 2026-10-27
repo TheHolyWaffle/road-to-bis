@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["DOM", "DOM.Iterable", "ESNext", "WebWorker"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "noEmit": true,
+    "useDefineForClassFields": true,
+    "types": ["vite/client", "vitest/globals", "node"],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["vendor/osrs-dps-calc/src/*"],
+      "next/image": ["src/stubs/next-image.ts"]
+    }
+  },
+  "include": ["src", "vite.config.ts"]
+}
