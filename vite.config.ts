@@ -18,6 +18,7 @@ export default defineConfig({
   define: {
     'process.env.NEXT_PUBLIC_HIT_DIST_SANITY_CHECK': 'undefined',
     'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV ?? 'development'),
+    __APP_COMMIT__: JSON.stringify(execSync('git rev-parse HEAD').toString().trim()),
     __ENGINE_COMMIT__: JSON.stringify(execSync('git -C vendor/osrs-dps-calc rev-parse HEAD').toString().trim()),
     __BUILT_AT__: JSON.stringify(new Date().toISOString()),
   },

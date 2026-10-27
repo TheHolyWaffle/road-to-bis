@@ -108,6 +108,26 @@ h1, h2, h3 { margin: 0; line-height: 1.15; }
 .hint { margin: 0; color: var(--muted); font-size: 0.86rem; }
 
 .colophon { margin-top: 2rem; color: var(--muted); font-size: 0.8rem; text-align: center; }
+
+.feedback {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 10;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--slate-raised);
+  color: var(--gold);
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-decoration: none;
+  box-shadow: 0 4px 14px rgb(0 0 0 / 0.35);
+}
+.feedback:hover { border-color: var(--gold-deep); }
 .error { margin: 0; color: var(--loss); font-size: 0.86rem; }
 .notice {
   margin: 0;

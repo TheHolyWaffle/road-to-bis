@@ -38,6 +38,9 @@ const DEFAULT_SETTINGS: CombatSettings = {
   exactKillTime: false,
 };
 
+const REPO = 'https://github.com/TheHolyWaffle/road-to-bis';
+const FEEDBACK_URL = `${REPO}/issues/new?body=${encodeURIComponent(`\n\n---\nBuild ${__APP_COMMIT__.slice(0, 7)}`)}`;
+
 const DEFAULT_OPTIONS: SearchOptions = { includeEarned: false };
 
 interface SearchRun {
@@ -289,12 +292,21 @@ export const App = () => {
       </div>
 
       <footer className="colophon">
-        {'Game data from '}
+        {'Build '}
+        <a href={`${REPO}/commit/${__APP_COMMIT__}`} target="_blank" rel="noreferrer">{__APP_COMMIT__.slice(0, 7)}</a>
+        {'. Game data from '}
         <a href={`https://github.com/weirdgloop/osrs-dps-calc/commit/${__ENGINE_COMMIT__}`} target="_blank" rel="noreferrer">
           {`osrs-dps-calc ${__ENGINE_COMMIT__.slice(0, 7)}`}
         </a>
         {`, updated ${new Date(__BUILT_AT__).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}.`}
       </footer>
+
+      <a className="feedback" href={FEEDBACK_URL} target="_blank" rel="noreferrer">
+        <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden>
+          <path d="M2.5 3.5h11v7h-6l-3 2.5v-2.5h-2z" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+        </svg>
+        Feedback
+      </a>
     </div>
   );
 };
