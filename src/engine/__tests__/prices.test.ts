@@ -9,9 +9,13 @@ import { sampleBank } from './fixtures';
 const mappingFile = new URL('../../../scratch/mapping.json', import.meta.url);
 const latestFile = new URL('../../../scratch/latest.json', import.meta.url);
 
-describe.skipIf(!existsSync(mappingFile))('crafted item prices', () => {
-  const mapping = JSON.parse(readFileSync(mappingFile, 'utf8'));
-  const prices = indexPrices(mapping, JSON.parse(readFileSync(latestFile, 'utf8')).data);
+const hasSnapshots = existsSync(mappingFile);
+
+describe.skipIf(!hasSnapshots)('crafted item prices', () => {
+  // A skipped describe still runs its body.
+  const prices = hasSnapshots
+    ? indexPrices(JSON.parse(readFileSync(mappingFile, 'utf8')), JSON.parse(readFileSync(latestFile, 'utf8')).data)
+    : null!;
   const ge = (name: string) => prices.byId.get(prices.idByName.get(name.toLowerCase())!)!;
   const item = (name: string) => representatives.find((r) => r.name === name)!;
 

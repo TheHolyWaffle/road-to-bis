@@ -38,6 +38,12 @@ jobs:
           npm run fetch-restricted-items
           npm run fetch-recommended-equipment
 
+      - name: Download price snapshots for the tests
+        run: |
+          mkdir -p scratch
+          curl -fsS -A 'road-to-bis' https://prices.runescape.wiki/api/v1/osrs/mapping -o scratch/mapping.json
+          curl -fsS -A 'road-to-bis' https://prices.runescape.wiki/api/v1/osrs/latest -o scratch/latest.json
+
       # Data that breaks the tests is never committed or deployed; the site keeps its last good build.
       - run: npm test
       - run: npm run build
