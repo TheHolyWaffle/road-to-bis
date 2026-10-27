@@ -1,0 +1,25 @@
+src/engine/optimizer.ts
+  s_ce9ba512b3e0b8::t_4c60420ee085fa 8,18,135,141,159-160
+src/engine/path.ts
+  s_ce9ba512b3e0b8::t_9c756b0b883739 3,29,109,115,156,363,369
+src/engine/search.ts
+  s_ce9ba512b3e0b8::t_4501c84d971729 3,36
+src/engine/task-runner.ts
+  s_ce9ba512b3e0b8::t_5a5090ef262acc 10,50,74,77
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ca9d11949e56ba81dfe9101fcbfc2de14c09b2c1",
+  "prompts": {},
+  "sessions": {
+    "s_ce9ba512b3e0b8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "85e0be67-85cf-41ff-9371-289c884d489e",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "bert.degeyter <787914+TheHolyWaffle@users.noreply.github.com>"
+    }
+  }
+}
