@@ -1,0 +1,152 @@
+.github/workflows/deploy.yml
+  h_7743ecf5462a7a 1-66
+.gitignore
+  h_7743ecf5462a7a 1-4
+.gitmodules
+  h_7743ecf5462a7a 1-3
+AGENTS.md
+  h_7743ecf5462a7a 1-7
+README.md
+  h_7743ecf5462a7a 1-139
+index.html
+  h_7743ecf5462a7a 1-15
+package-lock.json
+  h_7743ecf5462a7a 1-2766
+package.json
+  h_7743ecf5462a7a 1-38
+sample-bank.tsv
+  h_7743ecf5462a7a 1-601
+scripts/fetch-recipes.mjs
+  h_7743ecf5462a7a 1-32
+scripts/fetch-recommended-equipment.mjs
+  h_7743ecf5462a7a 1-36
+scripts/fetch-restricted-items.mjs
+  h_7743ecf5462a7a 1-45
+scripts/wiki-api.mjs
+  h_7743ecf5462a7a 1-17
+src/app.tsx
+  h_7743ecf5462a7a 1-313
+src/build-info.d.ts
+  h_7743ecf5462a7a 1-3
+src/components/bank-step.tsx
+  h_7743ecf5462a7a 1-120
+src/components/budget-step.tsx
+  h_7743ecf5462a7a 1-114
+src/components/encounters-panel.tsx
+  h_7743ecf5462a7a 1-87
+src/components/gp.tsx
+  h_7743ecf5462a7a 1-6
+src/components/info-tip.tsx
+  h_7743ecf5462a7a 1-68
+src/components/item-icon.tsx
+  h_7743ecf5462a7a 1-12
+src/components/loadout-icons.tsx
+  h_7743ecf5462a7a 1-23
+src/components/monster-link.tsx
+  h_7743ecf5462a7a 1-8
+src/components/monsters-step.tsx
+  h_7743ecf5462a7a 1-231
+src/components/path-view.tsx
+  h_7743ecf5462a7a 1-275
+src/components/progress-panel.tsx
+  h_7743ecf5462a7a 1-72
+src/components/search-picker.tsx
+  h_7743ecf5462a7a 1-86
+src/components/stats-step.tsx
+  h_7743ecf5462a7a 1-155
+src/components/step.tsx
+  h_7743ecf5462a7a 1-21
+src/data/recipes.json
+  h_7743ecf5462a7a 1
+src/data/recommended-equipment.json
+  h_7743ecf5462a7a 1
+src/data/restricted-items.json
+  h_7743ecf5462a7a 1-1343
+src/engine/__tests__/benchmark.test.ts
+  h_7743ecf5462a7a 1-137
+src/engine/__tests__/fixtures.ts
+  h_7743ecf5462a7a 1-35
+src/engine/__tests__/items.test.ts
+  h_7743ecf5462a7a 1-35
+src/engine/__tests__/optimizer.test.ts
+  h_7743ecf5462a7a 1-39
+src/engine/__tests__/path-check.test.ts
+  h_7743ecf5462a7a 1-145
+src/engine/__tests__/path.test.ts
+  h_7743ecf5462a7a 1-94
+src/engine/__tests__/prices.test.ts
+  h_7743ecf5462a7a 1-68
+src/engine/__tests__/survival.test.ts
+  h_7743ecf5462a7a 1-29
+src/engine/build-player.ts
+  h_7743ecf5462a7a 1-106
+src/engine/calc-worker.ts
+  h_7743ecf5462a7a 1-20
+src/engine/candidates.ts
+  h_7743ecf5462a7a 1-86
+src/engine/dps-calc.ts
+  h_7743ecf5462a7a 1-27
+src/engine/empty-player.ts
+  h_7743ecf5462a7a 1-47
+src/engine/items.ts
+  h_7743ecf5462a7a 1-153
+src/engine/optimizer.ts
+  h_7743ecf5462a7a 1-404
+src/engine/path-worker.ts
+  h_7743ecf5462a7a 1-16
+src/engine/path.ts
+  h_7743ecf5462a7a 1-386
+src/engine/prices.ts
+  h_7743ecf5462a7a 1-188
+src/engine/search.ts
+  h_7743ecf5462a7a 1-75
+src/engine/sets.ts
+  h_7743ecf5462a7a 1-52
+src/engine/spells.ts
+  h_7743ecf5462a7a 1-49
+src/engine/survival.ts
+  h_7743ecf5462a7a 1-52
+src/engine/task-runner.ts
+  h_7743ecf5462a7a 1-218
+src/engine/types.ts
+  h_7743ecf5462a7a 1-134
+src/engine/worker-pool.ts
+  h_7743ecf5462a7a 1-59
+src/lib/__tests__/monster-presets.test.ts
+  h_7743ecf5462a7a 1-12
+src/lib/bank.ts
+  h_7743ecf5462a7a 1-26
+src/lib/format.ts
+  h_7743ecf5462a7a 1-30
+src/lib/hiscores.ts
+  h_7743ecf5462a7a 1-33
+src/lib/idb-store.ts
+  h_7743ecf5462a7a 1-22
+src/lib/monster-presets.ts
+  h_7743ecf5462a7a 1-105
+src/lib/use-persisted.ts
+  h_7743ecf5462a7a 1-26
+src/main.tsx
+  h_7743ecf5462a7a 1-6
+src/stubs/next-image.ts
+  h_7743ecf5462a7a 1
+src/styles.css
+  h_7743ecf5462a7a 1-607
+tsconfig.json
+  h_7743ecf5462a7a 1-23
+vendor/osrs-dps-calc
+  h_7743ecf5462a7a 1
+vite.config.ts
+  h_7743ecf5462a7a 1-35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "239c4e2096846ebe243f054fa23159753b2cb20f",
+  "prompts": {},
+  "humans": {
+    "h_7743ecf5462a7a": {
+      "author": "bert.degeyter <787914+TheHolyWaffle@users.noreply.github.com>"
+    }
+  }
+}
