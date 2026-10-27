@@ -1,0 +1,22 @@
+.github/workflows/deploy.yml
+  h_7743ecf5462a7a 50,59-60
+src/app.tsx
+  h_7743ecf5462a7a 41-43,295-297,303-309
+src/build-info.d.ts
+  h_7743ecf5462a7a 1-2
+src/styles.css
+  h_7743ecf5462a7a 111-130
+vite.config.ts
+  h_7743ecf5462a7a 21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "69070b1366cec2818a1b6c7dd42934a5d9a787ef",
+  "prompts": {},
+  "humans": {
+    "h_7743ecf5462a7a": {
+      "author": "bert.degeyter <787914+TheHolyWaffle@users.noreply.github.com>"
+    }
+  }
+}
