@@ -1,0 +1,20 @@
+index.html
+  h_7743ecf5462a7a 7
+public/favicon.svg
+  h_7743ecf5462a7a 1-18
+src/components/stats-step.tsx
+  h_7743ecf5462a7a 75-87,92-104,106-108,110-162,164-165
+src/styles.css
+  h_7743ecf5462a7a 246
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b565ac7fc9dd2d6c182fd489a162c9aec6a284ed",
+  "prompts": {},
+  "humans": {
+    "h_7743ecf5462a7a": {
+      "author": "bert.degeyter <787914+TheHolyWaffle@users.noreply.github.com>"
+    }
+  }
+}
