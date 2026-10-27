@@ -242,9 +242,8 @@ button.link {
 
 .looked-up { color: var(--gain); flex: none; }
 
-.advanced { display: grid; gap: 12px; }
 .advanced summary { cursor: pointer; font-weight: 600; }
-.advanced:not([open]) { gap: 0; }
+.advanced-body { display: grid; gap: 12px; margin-top: 12px; }
 .owned-slot h3 { font-size: 0.8rem; font-weight: 600; color: var(--muted); margin-bottom: 4px; }
 .owned-grid { display: flex; flex-wrap: wrap; gap: 3px; }
 

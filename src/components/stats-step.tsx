@@ -72,97 +72,98 @@ export const StatsStep = ({
       {lookup.error && <p className="error">{lookup.error}</p>}
 
       <details className="advanced">
-        <summary>Advanced: levels, prayers, boosts and spellbooks</summary>
-        <div className="skills">
-          {SKILLS.map(([k, label]) => (
-            <label key={k}>
-              <span>{label}</span>
-              <input
-                type="number"
-                min={1}
-                max={99}
-                value={skills[k]}
-                onChange={(e) => set({ skills: { ...skills, [k]: Math.min(99, Math.max(1, Number(e.target.value) || 1)) } })}
-              />
-            </label>
-          ))}
-        </div>
-
-        <fieldset>
-          <legend>
-            Unlocked prayers
-            <InfoTip label="prayers">
-              Every setup uses your best unlocked offensive prayer for its style. Without Piety, melee uses Ultimate Strength
-              and Incredible Reflexes. Without Rigour or Augury, it&apos;s Deadeye or Eagle Eye, and Mystic Vigour or Mystic Might.
-            </InfoTip>
-          </legend>
-          <div className="chips">
-            {PRAYERS.map(([k, label]) => (
-              <label key={k} className="check">
-                <input type="checkbox" checked={settings.unlocked[k]} onChange={(e) => set({ unlocked: { ...settings.unlocked, [k]: e.target.checked } })} />
-                {label}
-              </label>
-            ))}
-          </div>
-        </fieldset>
-
-        <fieldset>
-          <legend>
-            Boosts
-            <InfoTip label="boosts">
-              The potion used for each style. Every setup is calculated with this boost active. Smelling salts only work in
-              Tombs of Amascut and Overload (+) only in Chambers of Xeric.
-            </InfoTip>
-          </legend>
-          <div className="boosts">
-            {(Object.keys(POTION_CHOICES) as Family[]).map((f) => {
-              const current = POTION_CHOICES[f].findIndex(([, ps]) => ps.join() === settings.potions[f].join());
-              return (
-                <label key={f}>
-                  <span>{FAMILY_LABEL[f]}</span>
-                  <select
-                    value={Math.max(0, current)}
-                    onChange={(e) => set({ potions: { ...settings.potions, [f]: POTION_CHOICES[f][Number(e.target.value)][1] } })}
-                  >
-                    {POTION_CHOICES[f].map(([label], i) => <option key={label} value={i}>{label}</option>)}
-                  </select>
-                </label>
-              );
-            })}
-          </div>
-        </fieldset>
-
-        <fieldset>
-          <legend>
-            Spellbooks
-            <InfoTip label="spellbooks">
-              Spells from these spellbooks are tried on staves that can autocast, as long as your Magic level allows them.
-              Powered staves like the Trident use their own spell.
-            </InfoTip>
-          </legend>
-          <div className="chips">
-            {SPELLBOOKS.map(([book, label]) => (
-              <label key={book} className="check">
+        <summary>Advanced: levels, prayers, boosts, spellbooks and ammo</summary>
+        <div className="advanced-body">
+          <div className="skills">
+            {SKILLS.map(([k, label]) => (
+              <label key={k}>
+                <span>{label}</span>
                 <input
-                  type="checkbox"
-                  checked={settings.spellbooks.includes(book)}
-                  onChange={(e) => set({ spellbooks: e.target.checked ? [...settings.spellbooks, book] : settings.spellbooks.filter((b) => b !== book) })}
+                  type="number"
+                  min={1}
+                  max={99}
+                  value={skills[k]}
+                  onChange={(e) => set({ skills: { ...skills, [k]: Math.min(99, Math.max(1, Number(e.target.value) || 1)) } })}
                 />
-                {label}
               </label>
             ))}
           </div>
-        </fieldset>
-      </details>
 
-      <label className="check">
-        <input type="checkbox" checked={settings.anyAmmo} onChange={(e) => set({ anyAmmo: e.target.checked })} />
-        Use any tradeable ammo
-        <InfoTip label="ammo">
-          On: ranged setups can use any tradeable arrows, bolts, darts and javelins, such as dragon arrows or ruby dragon
-          bolts (e). Ammo is used up, so it&apos;s never suggested as an upgrade. Off: only ammo from your bank is used.
-        </InfoTip>
-      </label>
+          <fieldset>
+            <legend>
+              Unlocked prayers
+              <InfoTip label="prayers">
+                Every setup uses your best unlocked offensive prayer for its style. Without Piety, melee uses Ultimate Strength
+                and Incredible Reflexes. Without Rigour or Augury, it&apos;s Deadeye or Eagle Eye, and Mystic Vigour or Mystic Might.
+              </InfoTip>
+            </legend>
+            <div className="chips">
+              {PRAYERS.map(([k, label]) => (
+                <label key={k} className="check">
+                  <input type="checkbox" checked={settings.unlocked[k]} onChange={(e) => set({ unlocked: { ...settings.unlocked, [k]: e.target.checked } })} />
+                  {label}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>
+              Boosts
+              <InfoTip label="boosts">
+                The potion used for each style. Every setup is calculated with this boost active. Smelling salts only work in
+                Tombs of Amascut and Overload (+) only in Chambers of Xeric.
+              </InfoTip>
+            </legend>
+            <div className="boosts">
+              {(Object.keys(POTION_CHOICES) as Family[]).map((f) => {
+                const current = POTION_CHOICES[f].findIndex(([, ps]) => ps.join() === settings.potions[f].join());
+                return (
+                  <label key={f}>
+                    <span>{FAMILY_LABEL[f]}</span>
+                    <select
+                      value={Math.max(0, current)}
+                      onChange={(e) => set({ potions: { ...settings.potions, [f]: POTION_CHOICES[f][Number(e.target.value)][1] } })}
+                    >
+                      {POTION_CHOICES[f].map(([label], i) => <option key={label} value={i}>{label}</option>)}
+                    </select>
+                  </label>
+                );
+              })}
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>
+              Spellbooks
+              <InfoTip label="spellbooks">
+                Spells from these spellbooks are tried on staves that can autocast, as long as your Magic level allows them.
+                Powered staves like the Trident use their own spell.
+              </InfoTip>
+            </legend>
+            <div className="chips">
+              {SPELLBOOKS.map(([book, label]) => (
+                <label key={book} className="check">
+                  <input
+                    type="checkbox"
+                    checked={settings.spellbooks.includes(book)}
+                    onChange={(e) => set({ spellbooks: e.target.checked ? [...settings.spellbooks, book] : settings.spellbooks.filter((b) => b !== book) })}
+                  />
+                  {label}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+          <label className="check">
+            <input type="checkbox" checked={settings.anyAmmo} onChange={(e) => set({ anyAmmo: e.target.checked })} />
+            Use any tradeable ammo
+            <InfoTip label="ammo">
+              On: ranged setups can use any tradeable arrows, bolts, darts and javelins, such as dragon arrows or ruby dragon
+              bolts (e). Ammo is used up, so it&apos;s never suggested as an upgrade. Off: only ammo from your bank is used.
+            </InfoTip>
+          </label>
+        </div>
+      </details>
     </Step>
   );
 };
