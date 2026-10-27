@@ -23,8 +23,10 @@ import {
 import { maxedSkills } from './engine/empty-player';
 import { WorkerPool } from './engine/worker-pool';
 import { itemById } from './engine/items';
+import { monsterByKey } from './engine/build-player';
 import { parseBank } from './lib/bank';
 import { plural } from './lib/format';
+import { raidByKey } from './lib/monster-presets';
 import { usePersisted } from './lib/use-persisted';
 
 const DEFAULT_SETTINGS: CombatSettings = {
@@ -40,6 +42,11 @@ const DEFAULT_SETTINGS: CombatSettings = {
 
 const REPO = 'https://github.com/TheHolyWaffle/road-to-bis';
 const FEEDBACK_URL = `${REPO}/issues/new?body=${encodeURIComponent(`\n\n---\nBuild ${__APP_COMMIT__.slice(0, 7)}`)}`;
+
+const TITLE = 'Road to BiS';
+
+/** A raid boss or a phase is named after its raid or fight, so a preset shows as one name. */
+const fightName = (m: MonsterSpec) => raidByKey.get(m.key)?.name ?? m.encounter ?? monsterByKey.get(m.key)?.name ?? m.key;
 
 const DEFAULT_OPTIONS: SearchOptions = { includeEarned: false };
 
@@ -78,6 +85,12 @@ export const App = () => {
   const [error, setError] = useState<string | null>(null);
   const poolRef = useRef<WorkerPool | null>(null);
   const outputRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const names = [...new Set(monsters.map(fightName))];
+    const shown = names.length > 2 ? `${names.slice(0, 2).join(', ')} +${names.length - 2}` : names.join(', ');
+    document.title = shown ? `${shown} · ${TITLE}` : TITLE;
+  }, [monsters]);
 
   useEffect(() => {
     if (running) outputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });

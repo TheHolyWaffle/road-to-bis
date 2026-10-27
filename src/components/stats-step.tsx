@@ -57,7 +57,21 @@ export const StatsStep = ({
   return (
     <Step index={2} title="Stats and boosts" summary={`Combat level ${calculateCombatLevel(skills)}`}>
       <form className="row" onSubmit={(e) => { e.preventDefault(); if (rsn.trim()) lookUp(); }}>
-        <input aria-label="Username" placeholder="Username" value={rsn} onChange={(e) => onRsn(e.target.value)} />
+        {/* Not a login: keeps browsers and password managers from filling in or saving it. */}
+        <input
+          type="search"
+          name="rsn"
+          aria-label="RuneScape name"
+          placeholder="RuneScape name"
+          autoComplete="off"
+          spellCheck={false}
+          data-1p-ignore
+          data-lpignore="true"
+          data-bwignore
+          data-form-type="other"
+          value={rsn}
+          onChange={(e) => onRsn(e.target.value)}
+        />
         <button type="submit" disabled={lookup.busy || !rsn.trim()}>{lookup.busy ? 'Looking up…' : 'Look up levels'}</button>
         {lookedUp && !lookup.busy && (
           <svg className="looked-up" viewBox="0 0 16 16" width="18" height="18" role="img" aria-label={`Levels loaded for ${rsn.trim()}`}>
