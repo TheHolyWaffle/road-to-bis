@@ -29,14 +29,7 @@ export interface CombatSettings {
    * kill, instead of their DPS at half HP. Slower.
    */
   exactKillTime: boolean;
-  /** Hitpoints the food you bring heals in total, for kills per trip. */
-  foodPerTrip: number;
-  /** Time spent banking and getting back between trips, for kills per hour. */
-  bankingSeconds: number;
 }
-
-/** What a search optimises loadouts for. */
-export type Objective = 'dps' | 'killsPerHour';
 
 export interface MonsterSpec {
   /** `${id}|${name}|${version}`, see monsterKey(). */
@@ -71,10 +64,6 @@ export interface LoadoutRef {
 export interface OptimizedLoadout {
   loadout: LoadoutRef | null;
   dps: number;
-  /** Missing in results saved before survival was modelled. */
-  killsPerHour?: number;
-  killsPerTrip?: number;
-  damagePerKill?: number;
 }
 
 /** A loadout on a monster's cost curve: the best one found for some trade-off between score and gp spent. */

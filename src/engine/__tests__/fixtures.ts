@@ -18,8 +18,6 @@ export const maxedSettings: CombatSettings = {
   spellbooks: ['standard', 'ancient', 'arceuus'],
   anyAmmo: true,
   exactKillTime: false,
-  foodPerTrip: 400,
-  bankingSeconds: 120,
 };
 
 /** Levels that go with the sample bank. Which prayers are unlocked is assumed. */

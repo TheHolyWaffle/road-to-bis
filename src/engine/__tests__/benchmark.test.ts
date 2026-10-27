@@ -90,7 +90,7 @@ describe.skipIf(!existsSync(mappingFile) || !process.env.BENCHMARK)('benchmark a
       ownedIds, settings: sampleSettings, monsters, candidates,
     });
     const t = performance.now();
-    const out = await runSearch({ monsters, objective: 'dps', ownedIds }, async (task) => {
+    const out = await runSearch({ monsters, ownedIds }, async (task) => {
       // Yields between tasks, or vitest's worker times out.
       await new Promise((r) => { setTimeout(r); });
       return run(task);
@@ -124,7 +124,7 @@ describe.skipIf(!existsSync(mappingFile) || !process.env.BENCHMARK)('benchmark a
     lines.splice(1, 0, `Best-in-slot items in the wiki's tables for that style: ${sum(1)}/${sum(2)} (${sum(0)} in the top tier)`);
     const resale = resaleValues(ownedIds, prices, upgrades);
     const path = buildPath({
-      monsters, frontiers: out.frontiers, objective: 'dps', ownedIds, buyCost: new Map(candidates), resale, consumes: consumedParts(upgrades, ownedIds), sell: true,
+      monsters, frontiers: out.frontiers, ownedIds, buyCost: new Map(candidates), resale, consumes: consumedParts(upgrades, ownedIds), sell: true,
     });
     lines.push('', '=== Path');
     path.steps.forEach((s, i) => {

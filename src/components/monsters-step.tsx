@@ -127,7 +127,7 @@ export const MonstersStep = ({ monsters, onMonsters }: Props) => {
             {m?.is_slayer_monster && (
               <label className="check">
                 <input type="checkbox" checked={spec.onTask} onChange={(e) => update(spec.key, { onTask: e.target.checked })} />
-                On task
+                On slayer task
               </label>
             )}
           </div>
@@ -183,8 +183,8 @@ export const MonstersStep = ({ monsters, onMonsters }: Props) => {
             </span>
           )}
           <span>
-            On task
-            <InfoTip label="on task">
+            On slayer task
+            <InfoTip label="on slayer task">
               Whether you fight this monster on a slayer task, which turns on the slayer helmet and black mask bonus.
             </InfoTip>
           </span>

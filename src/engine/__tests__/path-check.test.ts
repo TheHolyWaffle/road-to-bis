@@ -55,7 +55,7 @@ const prepare = async (bosses: [name: string, version?: string][]) => {
     const run = createTaskRunner({
       ownedIds, settings: sampleSettings, monsters, candidates,
     });
-    out = await runSearch({ monsters, objective: 'dps', ownedIds }, async (task) => {
+    out = await runSearch({ monsters, ownedIds }, async (task) => {
       // Yields between tasks, or vitest's worker times out.
       await new Promise((r) => { setTimeout(r); });
       return run(task);
@@ -65,7 +65,6 @@ const prepare = async (bosses: [name: string, version?: string][]) => {
   const input: PathInput = {
     monsters,
     frontiers: out.frontiers,
-    objective: 'dps',
     ownedIds,
     buyCost: new Map(candidates),
     resale: resaleValues(ownedIds, prices, upgrades),

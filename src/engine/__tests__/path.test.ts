@@ -21,7 +21,6 @@ const frontier = (now: number, item: number, upgraded: number): Frontier => ({
 const input = (monsters: MonsterSpec[]): PathInput => ({
   monsters,
   frontiers: { [serpentine]: { ranged: frontier(5, FOR_SERPENTINE, 10) }, [magma]: { ranged: frontier(1, FOR_MAGMA, 2) } },
-  objective: 'dps',
   ownedIds: [OWNED],
   buyCost: new Map([[FOR_SERPENTINE, 10e6], [FOR_MAGMA, 10e6]]),
   resale: new Map(),

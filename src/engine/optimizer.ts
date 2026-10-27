@@ -5,10 +5,9 @@ import type {
   EquipmentPiece, Monster, PlayerEquipment, Spell,
 } from './dps-calc';
 import {
-  buildPlayer, type LoadoutState, type PlayerContext, scaledHp,
+  buildPlayer, type LoadoutState, type PlayerContext,
 } from './build-player';
 import { emptyEquipment } from './empty-player';
-import { damageTakenPerSecond, tripStats } from './survival';
 import {
   ammoFitsWeapon, dominates, familyStats, isRelevant, isSpecial, itemById, representatives,
   stylesForFamily, weaponFamilies, weaponNeedsAmmo,
@@ -16,7 +15,7 @@ import {
 import { GEAR_SETS } from './sets';
 import { candidateSpells } from './spells';
 import {
-  type CombatSettings, type Family, GEAR_SLOTS, type LoadoutRef, type Objective, SLOTS, type Slot,
+  type CombatSettings, type Family, GEAR_SLOTS, type LoadoutRef, SLOTS, type Slot,
 } from './types';
 
 const ARMOUR_SLOTS = ['head', 'cape', 'neck', 'body', 'shield', 'legs', 'hands', 'feet', 'ring'] as const;
@@ -38,7 +37,6 @@ export interface Scorer {
 
 export interface Scored {
   state: LoadoutState;
-  /** DPS or kills per hour, depending on the evaluator's objective. */
   score: number;
 }
 
@@ -124,36 +122,23 @@ const killTimeDps = (calc: PlayerVsNPCCalc): number | null => {
   return monster.inputs.monsterCurrentHp / ((expectedTicks / total) * SECONDS_PER_TICK);
 };
 
-export interface Reported {
-  dps: number;
-  killsPerHour: number;
-  killsPerTrip: number;
-  damagePerKill: number;
-}
-
 export class Evaluator implements Scorer {
   private cache = new Map<string, number>();
-
-  private takenCache = new Map<string, number>();
 
   /** Whole-kill results, which only the loadouts the search reports need. */
   private exactCache = new Map<string, number>();
 
   private readonly fullHpMonster: Monster;
 
-  private readonly hp: number;
-
   calcs = 0;
 
-  constructor(readonly ctx: PlayerContext, readonly objective: Objective = 'dps') {
+  constructor(readonly ctx: PlayerContext) {
     this.fullHpMonster = { ...ctx.monster, inputs: { ...ctx.monster.inputs, monsterCurrentHp: ctx.monster.skills.hp } };
-    this.hp = scaledHp(ctx.monster);
   }
 
   /** What the search maximises. */
   score(st: LoadoutState): number {
-    if (this.objective === 'dps') return this.dps(st);
-    return tripStats(this.dps(st), this.damageTaken(st), this.hp, this.ctx.settings).killsPerHour;
+    return this.dps(st);
   }
 
   private static memo(cache: Map<string, number>, st: LoadoutState, compute: () => number, fallback: () => number): number {
@@ -170,14 +155,9 @@ export class Evaluator implements Scorer {
     return v;
   }
 
-  private damageTaken(st: LoadoutState): number {
-    return Evaluator.memo(this.takenCache, st, () => damageTakenPerSecond(buildPlayer(st, this.ctx), this.ctx.monster), () => 0);
-  }
-
   /** Everything shown for a found loadout, with DPS from reportedDps(). */
-  report(st: LoadoutState): Reported {
-    const dps = this.reportedDps(st);
-    return { dps, ...tripStats(dps, this.damageTaken(st), this.hp, this.ctx.settings) };
+  report(st: LoadoutState): { dps: number } {
+    return { dps: this.reportedDps(st) };
   }
 
   /** Fast DPS, with HP-dependent effects taken at half the monster's HP. Used while searching. */

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { type EncounterState, killSeconds, type Path } from '../engine/path';
-import { FAMILY_LABEL, type Objective } from '../engine/types';
-import { formatPercent, formatScore, formatSeconds } from '../lib/format';
+import { FAMILY_LABEL } from '../engine/types';
+import { formatDps, formatPercent, formatSeconds } from '../lib/format';
 import { InfoTip } from './info-tip';
 import { LoadoutIcons } from './loadout-icons';
 import { MonsterLink } from './monster-link';
@@ -10,12 +10,9 @@ interface Props {
   path: Path;
   /** After the steps that fit the budget, or null without a budget. */
   atBudget: EncounterState[] | null;
-  objective: Objective;
 }
 
-export const EncountersPanel = ({
-  path, atBudget, objective,
-}: Props) => {
+export const EncountersPanel = ({ path, atBudget }: Props) => {
   const { start, bis } = path;
   const [open, setOpen] = useState<string | null>(null);
   const columns: [string, EncounterState[]][] = [['Now', start], ...(atBudget ? [['With budget', atBudget] as [string, EncounterState[]]] : []), ['Best in slot', bis]];
@@ -25,7 +22,7 @@ export const EncountersPanel = ({
       {s.family ? (
         <button type="button" className="link" aria-expanded={open === key} onClick={() => setOpen(open === key ? null : key)}>
           <span className={`style-dot family-${s.family}`} aria-hidden />
-          {`${FAMILY_LABEL[s.family]} ${formatScore(s.score, objective)}`}
+          {`${FAMILY_LABEL[s.family]} ${formatDps(s.score)}`}
           {s !== base && base.score > 0 && s.score > base.score + 1e-9 && <small className="up">{` ${formatPercent(s.score / base.score - 1)}`}</small>}
         </button>
       ) : <span className="muted">–</span>}
@@ -51,7 +48,7 @@ export const EncountersPanel = ({
   return (
     <details className="baseline" open>
       <summary>
-        {`Your setups, in ${objective === 'dps' ? 'DPS' : 'kills per hour'}`}
+        Your setups, in DPS
         <InfoTip label="your setups">
           Your best style and setup at each monster now, after the steps your budget covers, and with everything on the
           path. Select one to see the gear. A fight in phases also shows how long a whole kill takes, adding up each

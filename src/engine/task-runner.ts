@@ -7,7 +7,7 @@ import {
 } from './optimizer';
 import {
   type CombatSettings, type Family, type Frontier, type FrontierPoint, GEAR_SLOTS, type LoadoutRef, type MonsterSpec,
-  type Objective, type OptimizedLoadout,
+  type OptimizedLoadout,
 } from './types';
 
 export interface SearchContext {
@@ -21,7 +21,6 @@ export interface SearchContext {
 interface TaskBase {
   monster: string;
   family: Family;
-  objective: Objective;
 }
 
 /** Trace how far gp takes one style at one monster. */
@@ -48,7 +47,7 @@ export type TaskResult =
  */
 const RATES = Array.from({ length: 16 }, (_, i) => 2 ** (1 - i));
 
-const NO_LOADOUT: OptimizedLoadout = { loadout: null, dps: 0, killsPerHour: 0 };
+const NO_LOADOUT: OptimizedLoadout = { loadout: null, dps: 0 };
 
 const best = (...xs: (Scored | null)[]) => xs.reduce<Scored | null>((b, x) => (x && (!b || x.score > b.score) ? x : b), null);
 
@@ -72,10 +71,10 @@ export const createTaskRunner = (ctx: SearchContext) => {
   // A monster and style's cross task revisits the loadouts its frontier task found, so they share an evaluator.
   const evaluators = new Map<string, Evaluator>();
   const evaluator = (task: Task) => {
-    const key = `${task.monster}|${task.family}|${task.objective}`;
+    const key = `${task.monster}|${task.family}`;
     if (!evaluators.has(key)) {
       const context = playerContext(task.family, ctx.settings, specs.get(task.monster)?.onTask ?? false, monster(task.monster));
-      evaluators.set(key, new Evaluator(context, task.objective));
+      evaluators.set(key, new Evaluator(context));
     }
     return evaluators.get(key)!;
   };

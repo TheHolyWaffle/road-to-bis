@@ -1,11 +1,10 @@
 import type { Task, TaskResult } from './task-runner';
 import {
-  type Family, type Frontier, gearIds, type MonsterSpec, type Objective,
+  type Family, type Frontier, gearIds, type MonsterSpec,
 } from './types';
 
 interface SearchInput {
   monsters: MonsterSpec[];
-  objective: Objective;
   ownedIds: number[];
 }
 
@@ -34,7 +33,7 @@ export const runSearch = async (
   onUpdate: (p: Progress) => void,
 ): Promise<SearchOutput> => {
   const out: SearchOutput = { frontiers: {}, calcs: 0 };
-  const pairs = input.monsters.flatMap((m) => m.families.map((family) => ({ monster: m.key, family, objective: input.objective })));
+  const pairs = input.monsters.flatMap((m) => m.families.map((family) => ({ monster: m.key, family })));
 
   const runPhase = async (phase: Phase, tasks: Task[]) => {
     let done = 0;

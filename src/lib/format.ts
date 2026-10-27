@@ -13,10 +13,7 @@ export const wikiLink = (name: string, version?: string) => `https://oldschool.r
 
 export const plural = (count: number, word: string) => `${count.toLocaleString('en-GB')} ${word}${count === 1 ? '' : 's'}`;
 
-/** DPS to two decimals; kills per hour to one. */
-export const formatScore = (value: number, objective: 'dps' | 'killsPerHour') => (
-  objective === 'dps' ? value.toFixed(2) : value.toFixed(1)
-);
+export const formatDps = (dps: number) => dps.toFixed(2);
 
 
 export const formatPercent = (x: number) => `${x >= 0 ? '+' : ''}${(x * 100).toFixed(1)}%`;

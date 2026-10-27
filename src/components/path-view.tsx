@@ -4,9 +4,9 @@ import { itemById } from '../engine/items';
 import {
   type EncounterState, killSeconds, type Path, type PathStep, statesAfter,
 } from '../engine/path';
-import { FAMILY_LABEL, type Objective } from '../engine/types';
+import { FAMILY_LABEL } from '../engine/types';
 import {
-  equipmentImage, formatGp, formatPercent, formatScore, formatSeconds, plural, wikiLink,
+  equipmentImage, formatDps, formatGp, formatPercent, formatSeconds, plural, wikiLink,
 } from '../lib/format';
 import { Gp } from './gp';
 import { InfoTip } from './info-tip';
@@ -16,7 +16,6 @@ import { MonsterLink } from './monster-link';
 
 interface Props {
   path: Path;
-  objective: Objective;
   /** In millions of gp; null shows the whole path. */
   budgetM: number | null;
   onBudgetM: (m: number | null) => void;
@@ -32,8 +31,6 @@ interface Props {
   onBought: (step: PathStep) => void;
   onExclude: (ids: number[]) => void;
 }
-
-const UNIT: Record<Objective, string> = { dps: 'DPS', killsPerHour: 'kills/hr' };
 
 const names = (ids: number[]) => ids.map((id) => itemById(id)?.name ?? `#${id}`).join(' + ');
 
@@ -73,8 +70,8 @@ const FightTimes = ({ path, before, after }: { path: Path; before: EncounterStat
 };
 
 const StepDetail = ({
-  path, step, before, objective, onBought, onExclude,
-}: { path: Path; step: PathStep; before: EncounterState[]; objective: Objective; onBought: () => void; onExclude: () => void }) => (
+  path, step, before, onBought, onExclude,
+}: { path: Path; step: PathStep; before: EncounterState[]; onBought: () => void; onExclude: () => void }) => (
   <div className="upgrade-detail">
     <FightTimes path={path} before={before} after={step.states} />
     <table>
@@ -82,7 +79,7 @@ const StepDetail = ({
         <tr>
           <th scope="col">Monster</th>
           <th scope="col">Style</th>
-          <th scope="col" className="num">{`Before (${UNIT[objective]})`}</th>
+          <th scope="col" className="num">Before (DPS)</th>
           <th scope="col" className="num">After</th>
           <th scope="col" className="num">Change</th>
         </tr>
@@ -96,8 +93,8 @@ const StepDetail = ({
             <tr key={after.monster}>
               <th scope="row"><MonsterLink monsterKey={after.monster} /></th>
               <td>{b.family === after.family ? styleText(after) : `${styleText(b)} to ${styleText(after)}`}</td>
-              <td className="num">{formatScore(b.score, objective)}</td>
-              <td className="num">{formatScore(after.score, objective)}</td>
+              <td className="num">{formatDps(b.score)}</td>
+              <td className="num">{formatDps(after.score)}</td>
               <td className={`num ${changed ? 'up' : 'muted'}`}>{changed ? formatPercent(change) : '–'}</td>
             </tr>,
             changed && (
@@ -130,7 +127,7 @@ const StepDetail = ({
 );
 
 export const PathView = ({
-  path, objective, budgetM, onBudgetM, within, sell, onSell, stale, refining, durationMs, onBought, onExclude,
+  path, budgetM, onBudgetM, within, sell, onSell, stale, refining, durationMs, onBought, onExclude,
 }: Props) => {
   const [open, setOpen] = useState<number | null>(null);
   const reached = within > 0 ? path.steps[within - 1] : null;
@@ -261,7 +258,6 @@ export const PathView = ({
                   path={path}
                   step={step}
                   before={before}
-                  objective={objective}
                   onBought={() => onBought(step)}
                   onExclude={() => onExclude(step.buy)}
                 />

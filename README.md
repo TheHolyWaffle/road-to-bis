@@ -22,12 +22,12 @@ Then:
    a bank export, so add it with the search box.
 2. Set your levels (or look them up by username), prayers, boosts and spellbooks.
 3. Add the monsters you fight, or a preset such as a full raid. Choose the styles you'd use at each monster, its weight
-   (how much of your time goes there) and whether you're on task. Raid bosses also take the party size (CoX, ToB) or
+   (how much of your time goes there) and whether you're on a slayer task. Raid bosses also take the party size (CoX, ToB) or
    raid level (ToA); changing it on one boss changes it for the whole raid.
-4. Choose whether to optimise for DPS or kills per hour, then select **Plan my upgrades**. Set a budget on the results to
+4. Select **Plan my upgrades**. Set a budget on the results to
    see how far it gets you.
 
-Everything you enter, and the results of your last search, is saved in the browser and survives a refresh. The dev
+Everything you enter is saved in the browser and survives a refresh; search results aren't kept. The dev
 server always runs on port 5173, because browser storage is tied to the address.
 
 The hiscores lookup goes through [Wise Old Man](https://wiseoldman.net/), because the hiscores API has no CORS

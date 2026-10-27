@@ -1,13 +1,12 @@
 import { fullHp } from './build-player';
 import {
-  type Family, fightsOf, type Frontier, gearIds, type LoadoutRef, type MonsterSpec, type Objective, type OptimizedLoadout,
+  type Family, fightsOf, type Frontier, gearIds, type LoadoutRef, type MonsterSpec, type OptimizedLoadout,
 } from './types';
 
 export interface PathInput {
   monsters: MonsterSpec[];
   /** monster key -> style -> cost curve */
   frontiers: Record<string, Partial<Record<Family, Frontier>>>;
-  objective: Objective;
   ownedIds: number[];
   /** gp to get each item you don't own. */
   buyCost: Map<number, number>;
@@ -27,7 +26,7 @@ export interface PathInput {
 export interface EncounterState {
   monster: string;
   family: Family | null;
-  /** In the objective's unit: DPS or kills per hour. */
+  /** DPS. */
   score: number;
   loadout: LoadoutRef | null;
 }
@@ -70,7 +69,6 @@ interface PhaseTiming {
 }
 
 export interface Path {
-  objective: Objective;
   encounters: Encounter[];
   phases: PhaseTiming[];
   start: EncounterState[];
@@ -96,9 +94,6 @@ const EPS = 1e-9;
  */
 const SLOWEST = 10;
 
-const scoreOf = (r: { dps: number; killsPerHour?: number }, objective: Objective) => (objective === 'dps' ? r.dps : r.killsPerHour ?? 0);
-
-
 const strip = ({
   monster, family, score, loadout,
 }: EncounterState): EncounterState => ({
@@ -111,13 +106,13 @@ const strip = ({
  * one item or several that only pay off together, like switching style or completing a set.
  */
 export const buildPath = (input: PathInput): Path => {
-  const { monsters, objective } = input;
+  const { monsters } = input;
   const encounters: Encounter[] = fightsOf(monsters).map(({ name, phases }) => ({ name, phases, weight: monsters[phases[0]].weight }));
   const totalWeight = encounters.reduce((s, e) => s + e.weight, 0) || 1;
   const toOptions = (m: MonsterSpec, family: Family, loadouts: OptimizedLoadout[]): Option[] => loadouts
     .filter((p): p is OptimizedLoadout & { loadout: LoadoutRef } => !!p.loadout)
     .map((p) => ({
-      monster: m.key, family, score: scoreOf(p, objective), loadout: p.loadout, items: gearIds(p.loadout),
+      monster: m.key, family, score: p.dps, loadout: p.loadout, items: gearIds(p.loadout),
     }))
     .sort((a, b) => b.score - a.score);
   /** monster -> style -> the chosen loadouts, best first */
@@ -158,7 +153,7 @@ export const buildPath = (input: PathInput): Path => {
     const hp = fullHp(m.key, m.scaling);
     return { hp, share: hp > 0 ? (m.hp ?? hp) / hp : 0, top: Math.max(0, ...options[i].flat().map((o) => o.score)) };
   });
-  const timing = { objective, encounters, phases };
+  const timing = { encounters, phases };
   const seconds = (states: EncounterState[]) => killSeconds(timing, states);
 
   const held = new Set(input.ownedIds);
@@ -365,13 +360,13 @@ export const averageGain = (steps: Pick<PathStep, 'totalSpent' | 'gain'>[], hori
 };
 
 /** Seconds per kill of each encounter, for states like `start` or a step's. */
-export const killSeconds = ({ objective, encounters, phases }: Pick<Path, 'objective' | 'encounters' | 'phases'>, states: EncounterState[]) => {
+export const killSeconds = ({ encounters, phases }: Pick<Path, 'encounters' | 'phases'>, states: EncounterState[]) => {
   const phaseSeconds = (i: number) => {
     const { hp, share, top } = phases[i];
     // No setup can damage it, so there's nothing to speed up.
     if (!top || !share) return 0;
     const s = Math.max(states[i].score, top / SLOWEST);
-    return share * (objective === 'dps' ? hp / s : 3600 / s);
+    return (share * hp) / s;
   };
   return encounters.map((e) => e.phases.reduce((sum, i) => sum + phaseSeconds(i), 0));
 };

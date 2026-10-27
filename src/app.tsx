@@ -18,14 +18,13 @@ import { loadPrices, type PriceIndex } from './engine/prices';
 import { type Progress, runSearch, type SearchOutput } from './engine/search';
 import type { SearchContext } from './engine/task-runner';
 import {
-  type CombatSettings, FAMILIES, type MonsterSpec, type Objective,
+  type CombatSettings, FAMILIES, type MonsterSpec,
 } from './engine/types';
 import { maxedSkills } from './engine/empty-player';
 import { WorkerPool } from './engine/worker-pool';
 import { itemById } from './engine/items';
 import { parseBank } from './lib/bank';
 import { plural } from './lib/format';
-import { idbGet, idbSet } from './lib/idb-store';
 import { usePersisted } from './lib/use-persisted';
 
 const DEFAULT_SETTINGS: CombatSettings = {
@@ -37,18 +36,13 @@ const DEFAULT_SETTINGS: CombatSettings = {
   spellbooks: ['standard', 'ancient', 'arceuus'],
   anyAmmo: true,
   exactKillTime: false,
-  foodPerTrip: 400,
-  bankingSeconds: 120,
 };
 
-const DEFAULT_OPTIONS: SearchOptions = { objective: 'dps', includeEarned: false };
-
-const LAST_RUN_KEY = 'last-path-run';
+const DEFAULT_OPTIONS: SearchOptions = { includeEarned: false };
 
 interface SearchRun {
   out: SearchOutput;
   monsters: MonsterSpec[];
-  objective: Objective;
   ownedIds: number[];
   /** What each item you don't own cost when the search ran. */
   candidates: [id: number, cost: number][];
@@ -90,9 +84,6 @@ export const App = () => {
     loadPrices()
       .then((index) => setPrices({ status: 'ready', index }))
       .catch(() => setPrices({ status: 'error', message: 'Couldn\'t load prices from the OSRS Wiki. Check your connection and reload.' }));
-    idbGet<SearchRun>(LAST_RUN_KEY)
-      .then((saved) => { if (saved) setRun((current) => current ?? saved); })
-      .catch(() => {});
   }, []);
 
   const bank = useMemo(() => parseBank(bankText), [bankText]);
@@ -120,8 +111,8 @@ export const App = () => {
 
   // Monster weights only affect the path, so changing them rebuilds it without a new search.
   const signature = useMemo(
-    () => JSON.stringify([ownedIds, settings, options.objective, monsters.map((m) => [m.key, m.families, m.onTask, m.scaling]), candidates?.map((u) => u.key)]),
-    [ownedIds, settings, options.objective, monsters, candidates],
+    () => JSON.stringify([ownedIds, settings, monsters.map((m) => [m.key, m.families, m.onTask, m.scaling]), candidates?.map((u) => u.key)]),
+    [ownedIds, settings, monsters, candidates],
   );
 
   const canRun = (() => {
@@ -141,17 +132,17 @@ export const App = () => {
     };
     const pool = new WorkerPool(ctx);
     poolRef.current = pool;
+    setRun(null);
     setError(null);
     setProgress(null);
     setRunning(true);
     const started = Date.now();
     setStartedAt(started);
     try {
-      const out = await runSearch({ monsters, objective: options.objective, ownedIds }, pool.run, (p) => setProgress(p));
+      const out = await runSearch({ monsters, ownedIds }, pool.run, (p) => setProgress(p));
       const finished: SearchRun = {
         out,
         monsters,
-        objective: options.objective,
         ownedIds,
         candidates: costs,
         resale: [...resaleValues(ownedIds, prices.index, candidates)],
@@ -160,7 +151,6 @@ export const App = () => {
         durationMs: Date.now() - started,
       };
       setRun(finished);
-      idbSet(LAST_RUN_KEY, finished).catch(() => {});
     } catch (e) {
       if (poolRef.current === pool) setError((e as Error).message);
     } finally {
@@ -190,7 +180,6 @@ export const App = () => {
         } : m;
       }),
       frontiers: run.out.frontiers,
-      objective: run.objective,
       ownedIds: run.ownedIds,
       buyCost: keep(run.candidates),
       resale: new Map(run.resale.filter(([id]) => !excluded.has(id) || owned.has(id))),
@@ -268,11 +257,9 @@ export const App = () => {
               <EncountersPanel
                 path={path}
                 atBudget={budgetM === null ? null : statesAfter(path, within)}
-                objective={run.objective}
               />
               <PathView
                 path={path}
-                objective={run.objective}
                 budgetM={budgetM}
                 onBudgetM={setBudgetM}
                 within={within}

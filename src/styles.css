@@ -239,6 +239,12 @@ button.link {
 .owned { font-size: 0.9rem; }
 .owned > * + * { margin-top: 10px; }
 .owned summary { cursor: pointer; font-weight: 600; }
+
+.looked-up { color: var(--gain); flex: none; }
+
+.advanced { display: grid; gap: 12px; }
+.advanced summary { cursor: pointer; font-weight: 600; }
+.advanced:not([open]) { gap: 0; }
 .owned-slot h3 { font-size: 0.8rem; font-weight: 600; color: var(--muted); margin-bottom: 4px; }
 .owned-grid { display: flex; flex-wrap: wrap; gap: 3px; }
 
@@ -306,9 +312,6 @@ button.link {
 
 /* Budget */
 
-.budget { display: grid; gap: 8px; }
-.budget label { display: grid; grid-template-columns: 9.5em 6em auto; gap: 8px; align-items: center; font-size: 0.9rem; }
-.budget input { width: 100%; }
 .unit { color: var(--muted); font-size: 0.85rem; }
 
 .progress-bar { height: 8px; background: var(--slate-sunken); border-radius: 4px; overflow: hidden; }
