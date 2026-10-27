@@ -1,0 +1,16 @@
+.github/workflows/deploy.yml
+  h_7743ecf5462a7a 41-46
+src/engine/__tests__/prices.test.ts
+  h_7743ecf5462a7a 12-18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "70b1c64ec2051c7bd4ab0249366b43898d4448ef",
+  "prompts": {},
+  "humans": {
+    "h_7743ecf5462a7a": {
+      "author": "bert.degeyter <787914+TheHolyWaffle@users.noreply.github.com>"
+    }
+  }
+}
