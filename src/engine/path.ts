@@ -60,7 +60,7 @@ export interface Encounter {
 }
 
 /** What a phase's kill time follows from. */
-interface PhaseTiming {
+export interface PhaseTiming {
   /** The monster's full HP, and the share of it this phase takes. */
   hp: number;
   share: number;
@@ -92,7 +92,7 @@ const EPS = 1e-9;
  * A phase you can't damage yet counts as taking this many times as long as it would in best in slot, which keeps the
  * fight's kill time finite.
  */
-const SLOWEST = 10;
+export const SLOWEST = 10;
 
 const strip = ({
   monster, family, score, loadout,
@@ -149,10 +149,7 @@ export const buildPath = (input: PathInput): Path => {
     return ids;
   };
 
-  const phases = monsters.map((m, i): PhaseTiming => {
-    const hp = fullHp(m.key, m.scaling);
-    return { hp, share: hp > 0 ? (m.hp ?? hp) / hp : 0, top: Math.max(0, ...options[i].flat().map((o) => o.score)) };
-  });
+  const phases = monsters.map((m, i) => phaseTiming(m, options[i].flat().map((o) => o.score)));
   const timing = { encounters, phases };
   const seconds = (states: EncounterState[]) => killSeconds(timing, states);
 
@@ -359,17 +356,22 @@ export const averageGain = (steps: Pick<PathStep, 'totalSpent' | 'gain'>[], hori
   return (area + gain * (at(horizon) - from)) / (at(horizon) - at(0));
 };
 
-/** Seconds per kill of each encounter, for states like `start` or a step's. */
-export const killSeconds = ({ encounters, phases }: Pick<Path, 'encounters' | 'phases'>, states: EncounterState[]) => {
-  const phaseSeconds = (i: number) => {
-    const { hp, share, top } = phases[i];
-    // No setup can damage it, so there's nothing to speed up.
-    if (!top || !share) return 0;
-    const s = Math.max(states[i].score, top / SLOWEST);
-    return (share * hp) / s;
-  };
-  return encounters.map((e) => e.phases.reduce((sum, i) => sum + phaseSeconds(i), 0));
+/** A monster's phase timing, given the scores of the setups found for it. */
+export const phaseTiming = (m: MonsterSpec, scores: number[]): PhaseTiming => {
+  const hp = fullHp(m.key, m.scaling);
+  return { hp, share: hp > 0 ? (m.hp ?? hp) / hp : 0, top: Math.max(0, ...scores) };
 };
+
+/** Seconds per kill of a phase at `score`. */
+export const phaseSeconds = ({ hp, share, top }: PhaseTiming, score: number) => {
+  // No setup can damage it, so there's nothing to speed up.
+  if (!top || !share) return 0;
+  return (share * hp) / Math.max(score, top / SLOWEST);
+};
+
+/** Seconds per kill of each encounter, for states like `start` or a step's. */
+export const killSeconds = ({ encounters, phases }: Pick<Path, 'encounters' | 'phases'>, states: EncounterState[]) => encounters
+  .map((e) => e.phases.reduce((sum, i) => sum + phaseSeconds(phases[i], states[i].score), 0));
 
 /** The setups after the first `n` steps. */
 export const statesAfter = (path: Path, n: number) => (n > 0 ? path.steps[n - 1].states : path.start);

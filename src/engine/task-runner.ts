@@ -2,8 +2,8 @@ import { buildMonster, type LoadoutState, playerContext } from './build-player';
 import { type EquipmentPiece, isDefined, type Monster } from './dps-calc';
 import { itemById } from './items';
 import {
-  ascend, buildPool, type CostOf, Evaluator, fromRef, loadoutCost, optimize, Penalized, type Pool, type Scored, toRef,
-  wearing,
+  ascend, bestWeaponSetup, buildPool, type CostOf, Evaluator, fromRef, loadoutCost, optimize, Penalized, type Pool,
+  type Scored, toRef, wearing,
 } from './optimizer';
 import {
   type CombatSettings, type Family, type Frontier, type FrontierPoint, GEAR_SLOTS, type LoadoutRef, type MonsterSpec,
@@ -35,11 +35,33 @@ export interface CrossTask extends TaskBase {
   itemSets: number[][];
 }
 
-export type Task = FrontierTask | CrossTask;
+export interface JointMember {
+  monster: string;
+  baseline: LoadoutRef | null;
+  /** What a DPS more here is worth to the path's average speed-up, near your current gear. */
+  weight: number;
+}
+
+/**
+ * Choose items for every monster in one style at once, so an item that helps a little everywhere is valued by all of
+ * its help, not just its best monster's.
+ */
+export interface JointTask {
+  kind: 'joint';
+  family: Family;
+  members: JointMember[];
+  /** Item sets from the cost curves, tried as one purchase since a set's pieces may only pay off together. */
+  bundles: number[][];
+  /** The weighted score with every monster in best in slot, which sets the gp penalty's scale. */
+  scale: number;
+}
+
+export type Task = FrontierTask | CrossTask | JointTask;
 
 export type TaskResult =
   | { kind: 'frontier'; result: Frontier; calcs: number }
-  | { kind: 'cross'; result: FrontierPoint[]; calcs: number };
+  | { kind: 'cross'; result: FrontierPoint[]; calcs: number }
+  | { kind: 'joint'; result: number[][]; calcs: number };
 
 /**
  * Score given up per gp, as a fraction of the best-in-slot score per 10M gp. Each finds the best loadout for that
@@ -48,6 +70,10 @@ export type TaskResult =
 const RATES = Array.from({ length: 16 }, (_, i) => 2 ** (1 - i));
 
 const NO_LOADOUT: OptimizedLoadout = { loadout: null, dps: 0 };
+
+/** Purchases the joint search re-checks with a full search at every monster, out of the best by a quick estimate. */
+const JOINT_SHORTLIST = 4;
+const JOINT_MAX_STEPS = 60;
 
 const best = (...xs: (Scored | null)[]) => xs.reduce<Scored | null>((b, x) => (x && (!b || x.score > b.score) ? x : b), null);
 
@@ -70,14 +96,15 @@ export const createTaskRunner = (ctx: SearchContext) => {
   };
   // A monster and style's cross task revisits the loadouts its frontier task found, so they share an evaluator.
   const evaluators = new Map<string, Evaluator>();
-  const evaluator = (task: Task) => {
-    const key = `${task.monster}|${task.family}`;
-    if (!evaluators.has(key)) {
-      const context = playerContext(task.family, ctx.settings, specs.get(task.monster)?.onTask ?? false, monster(task.monster));
-      evaluators.set(key, new Evaluator(context));
+  const evaluator = (key: string, family: Family) => {
+    const k = `${key}|${family}`;
+    if (!evaluators.has(k)) {
+      const context = playerContext(family, ctx.settings, specs.get(key)?.onTask ?? false, monster(key));
+      evaluators.set(k, new Evaluator(context));
     }
-    return evaluators.get(key)!;
+    return evaluators.get(k)!;
   };
+  const totalCalcs = () => [...evaluators.values()].reduce((sum, ev) => sum + ev.calcs, 0);
   const ownedPool = (f: Family) => pool('owned', f, () => owned);
 
   const ownedIds = new Set(ctx.ownedIds);
@@ -88,10 +115,19 @@ export const createTaskRunner = (ctx: SearchContext) => {
   const keyOf = (items: EquipmentPiece[]) => items.map((i) => i.id).sort((a, b) => a - b).join(',');
 
   /** The best loadout using only what you own plus `items`, searched from `starts` and from your baseline. */
-  const bestUsing = (family: Family, ev: Evaluator, baseline: LoadoutState | null, items: EquipmentPiece[], starts: LoadoutState[] = []) => {
+  const poolWith = (family: Family, items: EquipmentPiece[]) => {
     // Owned items another owned item beats stay beaten, so the owned pool's survivors stand in for everything owned.
     const { weapons, armour, ammo } = ownedPool(family);
-    const p = buildPool([...weapons, ...Object.values(armour).flat(), ...ammo, ...items], family, ctx.settings, costOf);
+    return buildPool([...weapons, ...Object.values(armour).flat(), ...ammo, ...items], family, ctx.settings, costOf);
+  };
+  const bestUsing = (
+    family: Family,
+    ev: Evaluator,
+    baseline: LoadoutState | null,
+    items: EquipmentPiece[],
+    starts: LoadoutState[] = [],
+    p = poolWith(family, items),
+  ) => {
     if (!baseline) return optimize(p, ev);
     return best(ascend(wearing(baseline, items, p), ev, p), ...starts.map((st) => ascend(st, ev, p)));
   };
@@ -207,11 +243,99 @@ export const createTaskRunner = (ctx: SearchContext) => {
     return points;
   };
 
+  /**
+   * Greedily buys whatever adds the most weighted score across all the monsters, less a gp penalty swept from stingy to
+   * generous as on a cost curve. Returns what's held after every purchase, for the cross checks to value everywhere.
+   */
+  const joint = (task: JointTask): number[][] => {
+    const { family } = task;
+    const fullPool = pool('all', family, () => [...owned, ...candidates]);
+    const members = task.members.map((m) => {
+      const ev = evaluator(m.monster, family);
+      const baseline = m.baseline ? fromRef(m.baseline, ownedPool(family)) : null;
+      const current: Scored | null = baseline && { state: baseline, score: ev.score(baseline) };
+      // Quick estimates by option, valid while `current` is what they were made against.
+      return {
+        ev, weight: m.weight, baseline, current, quickFor: current, quick: new Map<string, number>(),
+      };
+    });
+    type Member = typeof members[number];
+    const buyable = [...fullPool.weapons, ...Object.values(fullPool.armour).flat()]
+      .filter((p) => !ownedIds.has(p.id) && costOf(p) > 0)
+      .map((p) => [p]);
+    const bundles = task.bundles
+      .map((ids) => ids.map(itemById).filter(isDefined))
+      .filter((b) => b.length > 1);
+    const gain = (m: Member, score: number) => m.weight * (score - (m.current?.score ?? 0));
+
+    let chosen: EquipmentPiece[] = [];
+    const found = new Map<string, number[]>();
+    /** A lower bound on what wearing `extra` adds at a monster: put on as is, re-picking only the weapon's setup. */
+    const quick = (m: Member, key: string, extra: EquipmentPiece[]) => {
+      if (!m.current) return 0;
+      if (m.quickFor !== m.current) {
+        m.quickFor = m.current;
+        m.quick.clear();
+      }
+      if (!m.quick.has(key)) {
+        const st = wearing(m.current.state, extra, fullPool);
+        const s = extra.some((p) => p.slot === 'weapon') ? bestWeaponSetup(st, m.ev, fullPool)?.score ?? 0 : m.ev.score(st);
+        m.quick.set(key, Math.max(0, gain(m, s)));
+      }
+      return m.quick.get(key)!;
+    };
+    // Full searches by option, valid until the next purchase.
+    const fullMemo = new Map<string, (Scored | null)[]>();
+    const full = (key: string, extra: EquipmentPiece[]) => {
+      if (!fullMemo.has(key)) {
+        const p = poolWith(family, [...chosen, ...extra]);
+        fullMemo.set(key, members.map((m) => {
+          const starts = m.current ? [m.current.state, wearing(m.current.state, extra, fullPool)] : [];
+          return best(m.current, bestUsing(family, m.ev, m.baseline, [...chosen, ...extra], starts, p));
+        }));
+      }
+      return fullMemo.get(key)!;
+    };
+
+    for (const rate of RATES) {
+      const lambda = (task.scale * rate) / 1e7;
+      for (let n = 0; n < JOINT_MAX_STEPS; n++) {
+        const held = new Set(chosen.map((p) => p.id));
+        const options = [...buyable, ...bundles]
+          .map((b) => b.filter((p) => !held.has(p.id)))
+          .filter((b) => b.length)
+          .map((extra) => {
+            const key = keyOf(extra);
+            const penalty = lambda * extra.reduce((sum, p) => sum + costOf(p), 0);
+            return { extra, key, penalty, value: members.reduce((sum, m) => sum + quick(m, key, extra), 0) - penalty };
+          })
+          .sort((a, b) => b.value - a.value)
+          .slice(0, JOINT_SHORTLIST);
+        let pick: { extra: EquipmentPiece[]; value: number; states: (Scored | null)[] } | null = null;
+        for (const { extra, key, penalty } of options) {
+          const states = full(key, extra);
+          const value = members.reduce((sum, m, i) => sum + gain(m, states[i]?.score ?? 0), 0) - penalty;
+          if (value > 0 && (!pick || value > pick.value)) pick = { extra, value, states };
+        }
+        if (!pick) break;
+        members.forEach((m, i) => { m.current = pick.states[i]; });
+        fullMemo.clear();
+        // Whatever a later purchase replaced everywhere isn't kept.
+        const worn = new Set(members.flatMap((m) => (m.current ? bought(m.current.state).map((p) => p.id) : [])));
+        chosen = [...chosen, ...pick.extra].filter((p) => worn.has(p.id));
+        found.set(keyOf(chosen), chosen.map((p) => p.id));
+      }
+    }
+    return [...found.values()];
+  };
+
   return (task: Task): TaskResult => {
-    const ev = evaluator(task);
-    const calcsBefore = ev.calcs;
-    return task.kind === 'frontier'
-      ? { kind: 'frontier', result: frontier(task, ev), calcs: ev.calcs - calcsBefore }
-      : { kind: 'cross', result: cross(task, ev), calcs: ev.calcs - calcsBefore };
+    const calcsBefore = totalCalcs();
+    const calcs = () => totalCalcs() - calcsBefore;
+    switch (task.kind) {
+      case 'frontier': return { kind: 'frontier', result: frontier(task, evaluator(task.monster, task.family)), calcs: calcs() };
+      case 'cross': return { kind: 'cross', result: cross(task, evaluator(task.monster, task.family)), calcs: calcs() };
+      case 'joint': return { kind: 'joint', result: joint(task), calcs: calcs() };
+    }
   };
 };

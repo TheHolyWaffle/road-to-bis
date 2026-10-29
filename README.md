@@ -54,16 +54,20 @@ plans a route through those maps. It runs on a pool of web workers:
    the curve also gets build orders: adding its items one at a time, most score per gp first, and dropping them one at
    a time, least score lost per gp first. That covers buying the key item of a bundle (say, a Tumeken's shadow) on its
    own.
-2. **Cross-checks.** Every item set found for one monster is tried at every other monster in the same style, so an item
-   bought for Graardor is valued at Kree'arra too.
-3. **Path.** Starting from your gear, repeatedly take the step that adds the most speed per gp: whatever moves one
+2. **Gear for every monster at once.** Per style, a joint search buys items for all your monsters together: each
+   purchase is the item (or curve item set) that adds the most speed summed over every monster, less the same gp
+   penalty swept from stingy to generous. That finds gear that's never the best value at any one monster but is
+   good at all of them, like a ring or cape every fight wants.
+3. **Cross-checks.** Every item set found for one monster, or by the joint search, is tried at every other monster in
+   the same style, so an item bought for Graardor is valued at Kree'arra too.
+4. **Path.** Starting from your gear, repeatedly take the step that adds the most speed per gp: whatever moves one
    monster to a better loadout, counting its effect at every monster. A step can be one item or several that only pay
    off together. Such a bundle is then split into the smallest parts that each pay off on their own, so only items
    that are worthless without each other share a step: a Masori body is slower than your elite void top until the
    void set bonus is gone anyway. Speed is measured per fight as how much faster a kill is than now, then averaged by
    weight, so a slow kill counts as much as a fast one. Steps that cost nothing after selling come first, by how much
    they help.
-4. **Refining the order.** The best step now isn't always the best order: a pricier step can make the next ones
+5. **Refining the order.** The best step now isn't always the best order: a pricier step can make the next ones
    cheap. So the path is then rebuilt by beam search, which keeps the four best paths so far, tries each one's four
    best next steps, and scores every path by finishing it step by step as above. Paths score by how much faster they
    are on average over every budget, with each doubling of the budget counting the same, so being fast at 50M matters
@@ -110,8 +114,8 @@ Pricing:
   inventory space or switch ticks, and no sharing of armour between styles.
 - Item level requirements aren't in the engine's data. Use *Don't suggest this* for gear you can't wear yet.
 - DPS is for the main attack only: special attacks, defence reduction and prayer upkeep aren't counted.
-- The path only considers loadouts the search found: it can miss a bundle whose value only shows once two monsters'
-  needs are combined, and a monster's loadout after a step is the best one the search already found with the items
+- The path only considers loadouts the search found. The joint search adds one item or curve item set at a time, so it
+  can still miss a set whose value only shows once several monsters' needs are combined, and a monster's loadout after a step is the best one the search already found with the items
   held, not a fresh search. The beam search improves the order but doesn't guarantee the best one.
 - Effects that depend on the monster's current HP are evaluated at half HP, unlike the wiki calculator's full-HP
   default. That's close to their average over a kill: at Vorkath, ruby dragon bolts (e) score 11.46 DPS this way, against

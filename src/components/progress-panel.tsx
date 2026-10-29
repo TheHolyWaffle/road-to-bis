@@ -7,13 +7,12 @@ interface Props {
   onCancel: () => void;
 }
 
-const STEPS: [Phase, string][] = [
-  ['curves', 'Find the best setup at every price, for each monster and style'],
-  ['cross', 'Check what each setup\'s items do at your other monsters'],
+/** Each phase's share of the progress bar: the first does most of the work. */
+const STEPS: [Phase, string, share: number][] = [
+  ['curves', 'Find the best setup at every price, for each monster and style', 0.7],
+  ['joint', 'Find the gear that helps most across all your monsters at once', 0.1],
+  ['cross', 'Check what each setup\'s items do at your other monsters', 0.2],
 ];
-
-/** The first phase does most of the work. */
-const SHARE: Record<Phase, [start: number, size: number]> = { curves: [0, 0.75], cross: [0.75, 0.25] };
 
 /** Whole seconds, e.g. "48s" or "2m 5s". */
 const formatElapsed = (seconds: number) => {
@@ -28,11 +27,12 @@ export const ProgressPanel = ({ progress, startedAt, onCancel }: Props) => {
     return () => clearInterval(id);
   }, []);
 
-  const [start, size] = progress ? SHARE[progress.phase] : [0, 0];
+  const activeIndex = STEPS.findIndex(([phase]) => phase === progress?.phase);
+  const start = STEPS.slice(0, Math.max(0, activeIndex)).reduce((sum, [, , share]) => sum + share, 0);
+  const size = progress ? STEPS[activeIndex][2] : 0;
   const fraction = progress ? start + (progress.total ? (size * progress.done) / progress.total : 0) : 0;
   const elapsed = (now - startedAt) / 1000;
   const remaining = fraction > 0.04 ? (elapsed * (1 - fraction)) / fraction : null;
-  const activeIndex = STEPS.findIndex(([phase]) => phase === progress?.phase);
 
   return (
     <section className="search-progress" aria-label="Search progress">
