@@ -1,0 +1,22 @@
+README.md
+  h_7743ecf5462a7a 57-63,70,117-118
+src/components/progress-panel.tsx
+  h_7743ecf5462a7a 10-14,30-32
+src/engine/path.ts
+  h_7743ecf5462a7a 63,95,152,359-369,372-375
+src/engine/search.ts
+  h_7743ecf5462a7a 1-5,7,15,31-58,68-72,80,87-89,92-96,99,101-118,122-126
+src/engine/task-runner.ts
+  h_7743ecf5462a7a 5-6,38-59,63-64,74-77,99-103,105,107,118,121-130,246-331,333-339
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5286a43631c545bed8dfabe1a8824d95179e8c19",
+  "prompts": {},
+  "humans": {
+    "h_7743ecf5462a7a": {
+      "author": "bert.degeyter <787914+TheHolyWaffle@users.noreply.github.com>"
+    }
+  }
+}
