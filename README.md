@@ -16,6 +16,10 @@ npm install
 npm run dev
 ```
 
+`npm install` also prepares the engine (`npm run prepare-engine`): it installs the engine's own dependencies from its
+`yarn.lock` and compiles it with its own TypeScript into `vendor/osrs-dps-calc/build`. We build against that output, so
+upgrading our dependencies or build tools can't break the engine.
+
 Then:
 
 1. Paste your bank export (the [Bank Memory](https://runelite.net/plugin-hub/show/bank-memory) plugin's `Item id / Item name / Item quantity` format). Worn gear isn't in
@@ -137,6 +141,7 @@ browser.
 
 ```sh
 git submodule update --remote vendor/osrs-dps-calc
+npm run prepare-engine
 ```
 
 Everything imported from the engine goes through `src/engine/dps-calc.ts`. Item effects the engine handles by name are

@@ -1,0 +1,35 @@
+name: PR checks
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: npm
+      - run: npm ci
+
+      - name: Download price snapshots for the tests
+        run: |
+          mkdir -p scratch
+          curl -fsS -A 'road-to-bis' https://prices.runescape.wiki/api/v1/osrs/mapping -o scratch/mapping.json
+          curl -fsS -A 'road-to-bis' https://prices.runescape.wiki/api/v1/osrs/latest -o scratch/latest.json
+
+      - run: npm test
+      # Also typechecks.
+      - run: npm run build

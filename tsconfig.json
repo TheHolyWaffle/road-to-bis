@@ -14,7 +14,7 @@
     "useDefineForClassFields": true,
     "types": ["vite/client", "vitest/globals", "node"],
     "paths": {
-      "@/*": ["./vendor/osrs-dps-calc/src/*"],
+      "@/*": ["./vendor/osrs-dps-calc/build/src/*"],
       "next/image": ["./src/stubs/next-image.ts"]
     }
   },
