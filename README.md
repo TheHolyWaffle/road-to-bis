@@ -16,6 +16,9 @@ npm install
 npm run dev
 ```
 
+`npm install` also installs the engine's own dependencies into `vendor/osrs-dps-calc/node_modules` (with the Yarn
+release the engine ships), so engine code always runs against the versions in its `yarn.lock`, whatever we upgrade.
+
 Then:
 
 1. Paste your bank export (the [Bank Memory](https://runelite.net/plugin-hub/show/bank-memory) plugin's `Item id / Item name / Item quantity` format). Worn gear isn't in
@@ -137,6 +140,7 @@ browser.
 
 ```sh
 git submodule update --remote vendor/osrs-dps-calc
+npm run install-engine-deps
 ```
 
 Everything imported from the engine goes through `src/engine/dps-calc.ts`. Item effects the engine handles by name are

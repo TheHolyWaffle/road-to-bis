@@ -9,6 +9,8 @@ export default defineConfig({
   base: './',
   plugins: [react()],
   resolve: {
+    // The engine has its own node_modules; it must not get a second React.
+    dedupe: ['react', 'react-dom'],
     alias: [
       { find: /^@\//, replacement: `${engineSrc}/` },
       { find: 'next/image', replacement: fileURLToPath(new URL('./src/stubs/next-image.ts', import.meta.url)) },
