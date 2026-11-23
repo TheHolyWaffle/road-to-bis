@@ -1,0 +1,14 @@
+renovate.json
+  h_7743ecf5462a7a 6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "bbbeca3274d8d5312deb4bc355b9f21643b77b5c",
+  "prompts": {},
+  "humans": {
+    "h_7743ecf5462a7a": {
+      "author": "bert.degeyter <787914+TheHolyWaffle@users.noreply.github.com>"
+    }
+  }
+}
