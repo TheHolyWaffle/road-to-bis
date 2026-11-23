@@ -1,0 +1,20 @@
+.github/workflows/deploy.yml
+  h_7743ecf5462a7a 49
+package-lock.json
+  h_7743ecf5462a7a 25-26,29,1209-1215,1237-1246,1508-1517,1554-1564,1848-1861
+package.json
+  h_7743ecf5462a7a 33-34,37
+src/engine/empty-player.ts
+  h_7743ecf5462a7a 19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e6cca0aa93279992c371ac83c3cc5c224cbad259",
+  "prompts": {},
+  "humans": {
+    "h_7743ecf5462a7a": {
+      "author": "bert.degeyter <787914+TheHolyWaffle@users.noreply.github.com>"
+    }
+  }
+}
