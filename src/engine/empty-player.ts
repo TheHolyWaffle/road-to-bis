@@ -16,6 +16,7 @@ export const emptyEquipment = (): PlayerEquipment => ({
 });
 
 export const generateEmptyPlayer = (): Player => ({
+  uuid: 'loadout',
   name: 'Loadout',
   style: getDefaultCombatStyle(EquipmentCategory.NONE),
   skills: maxedSkills(),

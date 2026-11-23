@@ -46,6 +46,7 @@ jobs:
 
       # Data that breaks the tests is never committed or deployed; the site keeps its last good build.
       - run: npm test
+      - run: npm run typecheck
 
       # Before the build, so the footer names the commit with the new data.
       - name: Commit updated game data
