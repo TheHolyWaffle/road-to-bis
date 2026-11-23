@@ -16,8 +16,9 @@ npm install
 npm run dev
 ```
 
-`npm install` also installs the engine's own dependencies into `vendor/osrs-dps-calc/node_modules` (with the Yarn
-release the engine ships), so engine code always runs against the versions in its `yarn.lock`, whatever we upgrade.
+`npm install` also prepares the engine (`npm run prepare-engine`): it installs the engine's own dependencies from its
+`yarn.lock` and compiles it with its own TypeScript into `vendor/osrs-dps-calc/build`. We build against that output, so
+upgrading our dependencies or build tools can't break the engine.
 
 Then:
 
@@ -140,7 +141,7 @@ browser.
 
 ```sh
 git submodule update --remote vendor/osrs-dps-calc
-npm run install-engine-deps
+npm run prepare-engine
 ```
 
 Everything imported from the engine goes through `src/engine/dps-calc.ts`. Item effects the engine handles by name are

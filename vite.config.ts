@@ -4,6 +4,8 @@ import { execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const engineSrc = fileURLToPath(new URL('./vendor/osrs-dps-calc/src', import.meta.url));
+// Compiled by `npm run prepare-engine` with the engine's own TypeScript.
+const engineBuild = fileURLToPath(new URL('./vendor/osrs-dps-calc/build/src', import.meta.url));
 
 export default defineConfig({
   base: './',
@@ -12,7 +14,9 @@ export default defineConfig({
     // The engine has its own node_modules; it must not get a second React.
     dedupe: ['react', 'react-dom'],
     alias: [
-      { find: /^@\//, replacement: `${engineSrc}/` },
+      // Raw source for parsing, and images, which aren't compiled.
+      { find: /^@\/(.+\?raw|public\/.+)$/, replacement: `${engineSrc}/$1` },
+      { find: /^@\//, replacement: `${engineBuild}/` },
       { find: 'next/image', replacement: fileURLToPath(new URL('./src/stubs/next-image.ts', import.meta.url)) },
     ],
   },

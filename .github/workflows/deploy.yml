@@ -34,7 +34,7 @@ jobs:
         if: github.event_name != 'push'
         run: |
           git submodule update --remote vendor/osrs-dps-calc
-          npm run install-engine-deps
+          npm run prepare-engine
           npm run fetch-recipes
           npm run fetch-restricted-items
           npm run fetch-recommended-equipment
