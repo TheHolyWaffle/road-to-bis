@@ -3,7 +3,7 @@
   "extends": [
     "config:recommended"
   ],
-  "platformAutomerge": true,
+  "platformAutomerge": false,
   "packageRules": [
     {
       "matchUpdateTypes": ["minor", "patch", "pin", "digest", "lockFileMaintenance"],
