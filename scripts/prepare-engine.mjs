@@ -12,7 +12,13 @@ if (!existsSync(`${engine}package.json`)) {
   process.exit(0);
 }
 
-const run = (args) => spawnSync(process.execPath, args, { cwd: engine, stdio: ['inherit', 'pipe', 'inherit'], encoding: 'utf8' });
+const run = (args) => {
+  const result = spawnSync(process.execPath, args, {
+    cwd: engine, stdio: ['inherit', 'pipe', 'inherit'], encoding: 'utf8', maxBuffer: Infinity,
+  });
+  if (result.error) throw result.error;
+  return result;
+};
 
 const yarnPath = readFileSync(`${engine}.yarnrc.yml`, 'utf8').match(/^yarnPath:\s*(.+)$/m)?.[1].trim();
 if (!yarnPath) throw new Error('No yarnPath in the engine .yarnrc.yml');
@@ -35,5 +41,8 @@ if (!existsSync(`${engine}build/src/lib/PlayerVsNPCCalc.js`)) {
   process.stdout.write(stdout);
   throw new Error('Compiling the engine failed');
 }
+// vite.config.ts compares this to the submodule's HEAD to catch a build left behind by a submodule move.
+const commit = spawnSync('git', ['-C', engine, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).stdout.trim();
+writeFileSync(`${engine}build/engine-commit`, commit);
 const errors = stdout.match(/error TS\d+/g)?.length ?? 0;
 console.log(`Engine compiled to vendor/osrs-dps-calc/build${errors ? ` (${errors} type errors in the engine, ignored)` : ''}`);

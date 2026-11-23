@@ -30,5 +30,6 @@ jobs:
           curl -fsS -A 'road-to-bis' https://prices.runescape.wiki/api/v1/osrs/mapping -o scratch/mapping.json
           curl -fsS -A 'road-to-bis' https://prices.runescape.wiki/api/v1/osrs/latest -o scratch/latest.json
 
-      - run: npm run typecheck
       - run: npm test
+      # Also typechecks.
+      - run: npm run build
