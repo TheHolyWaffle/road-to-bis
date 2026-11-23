@@ -1,0 +1,25 @@
+.github/workflows/deploy.yml
+  s_49f7982b033260::t_068df7c6aaec4d 37
+README.md
+  s_49f7982b033260::t_cef81f6c725b5c 19-21,143
+package.json
+  s_49f7982b033260::t_1f40d91521e4a0 12-13
+vite.config.ts
+  s_49f7982b033260::t_fa6ce9482d68f1 12-13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c7b9719a13ebce2d9bb6e16abec83832b3dce499",
+  "prompts": {},
+  "sessions": {
+    "s_49f7982b033260": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "29a3cc19-da0e-4006-9302-3e755a99052e",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "bert.degeyter <787914+TheHolyWaffle@users.noreply.github.com>"
+    }
+  }
+}
