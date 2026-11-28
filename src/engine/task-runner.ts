@@ -16,6 +16,8 @@ export interface SearchContext {
   monsters: MonsterSpec[];
   /** Items you could get, with their cost in gp. */
   candidates: [id: number, cost: number][];
+  /** What each owned item sells for after tax, when the path sells what it replaces; empty otherwise. */
+  sales?: [id: number, gp: number][];
 }
 
 interface TaskBase {
@@ -179,6 +181,25 @@ export const createTaskRunner = (ctx: SearchContext) => {
     return tried;
   };
 
+  const sales = new Map(ctx.sales ?? []);
+  /**
+   * What a loadout costs once the owned gear it no longer wears from `baseline` is sold, never less than nothing so
+   * that selling alone never counts as an upgrade.
+   */
+  const netCost = (baseline: LoadoutState | null) => {
+    const sellable = baseline ? GEAR_SLOTS.flatMap((slot) => {
+      const id = baseline.equipment[slot]?.id;
+      const gp = id === undefined ? undefined : sales.get(id);
+      return gp ? [{ id, gp }] : [];
+    }) : [];
+    return (st: LoadoutState) => {
+      const cost = loadoutCost(st, costOf);
+      if (!sellable.length || !cost) return cost;
+      const freed = sellable.reduce((sum, { id, gp }) => (GEAR_SLOTS.some((slot) => st.equipment[slot]?.id === id) ? sum : sum + gp), 0);
+      return Math.max(0, cost - freed);
+    };
+  };
+
   const point = (ev: Evaluator, st: LoadoutState): FrontierPoint => ({ loadout: toRef(st), ...ev.report(st), cost: loadoutCost(st, costOf) });
   /** Whether `score` beats `than` by more than rounding. */
   const beats = (score: number, than: number) => score > than * (1 + 1e-6) + 1e-9;
@@ -193,8 +214,9 @@ export const createTaskRunner = (ctx: SearchContext) => {
     // slot-by-slot ascent only finds a local optimum.
     const found: LoadoutState[] = [];
     let prev = baseline?.state ?? bis.state;
+    const cost = netCost(baseline?.state ?? null);
     for (const rate of RATES) {
-      const scorer = new Penalized(ev, costOf, (bis.score * rate) / 1e7);
+      const scorer = new Penalized(ev, cost, (bis.score * rate) / 1e7);
       const starts = new Set([prev, baseline?.state, bis.state].filter(isDefined));
       const s = best(...[...starts].map((start) => optimize(fullPool, scorer, { start })));
       if (s) {
@@ -208,7 +230,7 @@ export const createTaskRunner = (ctx: SearchContext) => {
     const curve: Scored[] = [];
     let top = baseline?.score ?? 0;
     for (const { state, score } of found
-      .map((st) => ({ state: st, score: ev.score(st), cost: loadoutCost(st, costOf) }))
+      .map((st) => ({ state: st, score: ev.score(st), cost: cost(st) }))
       .sort((a, b) => a.cost - b.cost || b.score - a.score)) {
       if (!beats(score, top)) continue;
       top = score;

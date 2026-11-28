@@ -57,7 +57,8 @@ plans a route through those maps. It runs on a pool of web workers:
    a time; sets that only pay off when complete (void, Masori, Torva, …) are tried as starting points. Each loadout on
    the curve also gets build orders: adding its items one at a time, most score per gp first, and dropping them one at
    a time, least score lost per gp first. That covers buying the key item of a bundle (say, a Tumeken's shadow) on its
-   own.
+   own. With **Sell what's replaced** on, a loadout's price is what it costs after selling the gear it replaces, so a
+   swap that's cheap once your old item is sold is found too; changing that setting needs a new search.
 2. **Gear for every monster at once.** Per style, a joint search buys items for all your monsters together: each
    purchase is the item (or curve item set) that adds the most speed summed over every monster, less the same gp
    penalty swept from stingy to generous. That finds gear that's never the best value at any one monster but is
@@ -74,8 +75,12 @@ plans a route through those maps. It runs on a pool of web workers:
 5. **Refining the order.** The best step now isn't always the best order: a pricier step can make the next ones
    cheap. So the path is then rebuilt by beam search, which keeps the four best paths so far, tries each one's four
    best next steps, and scores every path by finishing it step by step as above. Paths score by how much faster they
-   are on average over every budget, with each doubling of the budget counting the same, so being fast at 50M matters
-   as much as at 5B. The step-by-step path shows first while this runs in a background worker.
+   are on average over every budget from 1 gp up, with each doubling of the budget counting the same, so being fast at
+   500K matters as much as at 5B. The step-by-step path shows first while this runs in a background worker.
+6. **Your budget.** The best path for every budget at once is rarely the best way to spend one particular budget: its
+   cheap early steps can use up gp that one bigger purchase would have used better. So with a budget set, the steps
+   within it are planned for exactly that amount, by the same beam search, also trying the steps that add the most
+   speed and fit; the path then carries on from there step by step.
 
 **Fights in phases.** The *all phases* presets (Zulrah, Alchemical Hydra, Kalphite Queen) and the raids add each
 phase or boss as its own monster, grouped into one fight. Each phase gets its own best style and setup, as if you
@@ -83,10 +88,10 @@ switched gear completely, and the fight is scored by the time a whole kill takes
 your DPS there. Phases listed with the whole boss's HP, like Hydra's, take an HP per kill instead. A phase no setup
 you own can damage counts as taking ten times as long as in best in slot.
 
-With **Sell what's replaced** on, gear is sold (after the 2% GE tax) once no style at any monster still wears it and no
-better loadout on a cost curve needs it. Only gear the path has worn is sold, so spec weapons and other items for
-content that isn't modelled stay put. Making an item from one you own (an imbue, a Neitiznot faceguard) uses that item
-up.
+With **Sell what's replaced** on, gear is sold (at the GE sell price, after the 2% tax) once no style at any monster
+still wears it and no better loadout on a cost curve needs it. Only gear the path has worn is sold, so spec weapons and
+other items for content that isn't modelled stay put. Making an item from one you own (an imbue, a Neitiznot faceguard)
+uses that item up.
 
 `npm run benchmark` builds a path for the sample bank against eight bosses and writes `scratch/benchmark.txt`: each
 style's cost curve and best-in-slot loadout, every best-in-slot item tagged with its tier in the OSRS Wiki's
@@ -94,16 +99,19 @@ recommended equipment table for that boss and style, and the path. Refresh those
 `npm run fetch-recommended-equipment`.
 
 `npm run path-check` writes `scratch/path-check.txt`: the sample bank's path at Vorkath, each step's speed-up next to the
-best loadout the search found for the same gp, and greedy paths against beam-search paths there and at the eight bosses.
+best loadout the search found for the same gp, greedy paths against beam-search paths there and at the eight bosses,
+and the gain a path planned for each of a few budgets gets at that budget.
 
 Pricing:
 
+- Items are bought at the latest instant-buy price and sold at the latest instant-sell price, so swapping gear costs the
+  gap between the two as well as the tax.
 - Charged or degradable items are priced as their uncharged tradeable form.
 - Untradeables that can be made are priced at the cheapest recipe from the OSRS Wiki, following nested recipes. Parts
   in your bank cost nothing, as long as you have enough of them: the whole bank counts, not just equipment. With a
-  Helm of Neitiznot in your bank, a Neitiznot faceguard costs one Basilisk jaw. Untradeable parts and currencies such
-  as NMZ points count as earned rather than bought, and gp fees count in full. Refresh the recipes with
-  `npm run fetch-recipes`.
+  Helm of Neitiznot in your bank, a Neitiznot faceguard costs one Basilisk jaw. A part only counts once: when a step
+  uses it up, a later step that needs it buys it. Untradeable parts and currencies such as NMZ points count as earned
+  rather than bought, and gp fees count in full. Refresh the recipes with `npm run fetch-recipes`.
 - Imbued versions of items you own count as free.
 - Other untradeables count as 1 gp. Items that need an untradeable you'd have to earn are only planned with
   **Untradeables to earn** on.

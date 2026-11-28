@@ -11,12 +11,20 @@ const latestFile = new URL('../../../scratch/latest.json', import.meta.url);
 
 const hasSnapshots = existsSync(mappingFile);
 
+describe('GE prices', () => {
+  it('buys at the instant-buy price and sells at the instant-sell price', () => {
+    const idx = indexPrices([{ id: 1, name: 'Item' }, { id: 2, name: 'One-sided' }], { 1: { high: 110, low: 90 }, 2: { high: null, low: 50 } });
+    expect(idx.byId.get(1)).toEqual({ buy: 110, sell: 90 });
+    expect(idx.byId.get(2)).toEqual({ buy: 50, sell: 50 });
+  });
+});
+
 describe.skipIf(!hasSnapshots)('crafted item prices', () => {
   // A skipped describe still runs its body.
   const prices = hasSnapshots
     ? indexPrices(JSON.parse(readFileSync(mappingFile, 'utf8')), JSON.parse(readFileSync(latestFile, 'utf8')).data)
     : null!;
-  const ge = (name: string) => prices.byId.get(prices.idByName.get(name.toLowerCase())!)!;
+  const ge = (name: string) => prices.byId.get(prices.idByName.get(name.toLowerCase())!)!.buy;
   const item = (name: string) => representatives.find((r) => r.name === name)!;
 
   it('prices a crafted item at its parts, minus the ones you own', () => {

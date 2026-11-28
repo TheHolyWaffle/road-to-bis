@@ -1,4 +1,5 @@
 import { fullHp } from './build-player';
+import type { PartUse } from './candidates';
 import {
   type Family, fightsOf, type Frontier, gearIds, type LoadoutRef, type MonsterSpec, type OptimizedLoadout,
 } from './types';
@@ -8,12 +9,14 @@ export interface PathInput {
   /** monster key -> style -> cost curve */
   frontiers: Record<string, Partial<Record<Family, Frontier>>>;
   ownedIds: number[];
-  /** gp to get each item you don't own. */
+  /** gp to get each item, including owned ones the path may sell and buy back. */
   buyCost: Map<number, number>;
-  /** GE price of each tradeable item, owned or not; anything missing can't be sold. */
+  /** GE sell price of each tradeable item, owned or not; anything missing can't be sold. */
   resale: Map<number, number>;
-  /** Owned items that making an item uses up, e.g. the ring an imbued ring is made from. */
-  consumes: Map<number, number[]>;
+  /** The owned items and materials making an item uses up, e.g. the ring an imbued ring is made from. */
+  parts: Map<number, PartUse[]>;
+  /** How many of each material among those parts you own, by lowercase name. */
+  stock: Map<string, number>;
   /** Sell gear once no style at any monster uses it any more. */
   sell: boolean;
   /**
@@ -21,6 +24,13 @@ export interface PathInput {
    * try its `branching` best steps, finishing each greedily to score it.
    */
   beam?: { width: number; branching: number };
+  /**
+   * With a beam, also plan for this many gp: the steps within it are the best way found to spend exactly that, and
+   * the path carries on from there.
+   */
+  budget?: number | null;
+  /** The beam's path for every budget at once, from an earlier call with the same input, so it isn't searched again. */
+  everyBudget?: PathStep[];
 }
 
 export interface EncounterState {
@@ -37,7 +47,7 @@ export interface PathStep {
   /** What each of `buy` costs. */
   costs: number[];
   sell: number[];
-  /** Owned items that making a bought one uses up. */
+  /** Owned equipment that making a bought one uses up. */
   consumed: number[];
   /** gp spent on `buy`, and got back for `sell` after GE tax. */
   spent: number;
@@ -75,6 +85,8 @@ export interface Path {
   steps: PathStep[];
   /** The best loadout at each monster with every item owned. */
   bis: EncounterState[];
+  /** With a beam, its path for every budget at once, to pass back as `everyBudget` when only the budget changes. */
+  everyBudget?: PathStep[];
 }
 
 interface Option extends EncounterState {
@@ -161,7 +173,9 @@ export const buildPath = (input: PathInput): Path => {
   const gainOf = (states: EncounterState[]) => seconds(states)
     .reduce((sum, t, e) => sum + (t > 0 ? encounters[e].weight * (startSeconds[e] / t - 1) : 0), 0) / totalWeight;
 
-  type Move = Omit<PathStep, 'totalSpent' | 'states'> & { net: number; ratio: number; next: (Option | null)[][] };
+  type Move = Omit<PathStep, 'totalSpent' | 'states'> & {
+    net: number; ratio: number; next: (Option | null)[][]; stock: Map<string, number>;
+  };
   /**
    * Whether `a` is a better step than `b`. Steps that cost nothing after sales come first, by speed added and then by
    * gp made; the rest by speed added per gp.
@@ -177,6 +191,8 @@ export const buildPath = (input: PathInput): Path => {
     held: Set<number>;
     /** Only gear the path has worn is ever sold; whatever else is in your bank may be for content not modelled here. */
     worn: Set<number>;
+    /** Owned parts not used up yet. */
+    stock: Map<string, number>;
     current: (Option | null)[][];
     gain: number;
     totalSpent: number;
@@ -188,8 +204,12 @@ export const buildPath = (input: PathInput): Path => {
    * well, not all of them at once.
    */
   const ids = (set: Set<number>) => [...set].sort((x, y) => x - y).join(',');
-  // What you hold and have worn decides every step from here; only the gp spent so far differs.
-  const keyOf = (p: Progress) => `${ids(p.held)}|${ids(p.worn)}`;
+  // What you hold, have worn and have left to craft with decides every step from here; only the gp spent so far differs.
+  const keys = new WeakMap<Progress, string>();
+  const keyOf = (p: Progress) => {
+    if (!keys.has(p)) keys.set(p, `${ids(p.held)}|${ids(p.worn)}|${[...p.stock].map(([n, q]) => `${n}:${q}`).join(',')}`);
+    return keys.get(p)!;
+  };
   const movesCache = new Map<string, Move[]>();
   const movesFrom = (p: Progress, within: Set<number> | null = null, proper = false): Move[] => {
     const cacheKey = `${keyOf(p)}|${within ? ids(within) : '*'}|${proper}`;
@@ -235,10 +255,30 @@ export const buildPath = (input: PathInput): Path => {
         const used = inUse(next);
         // Another monster's better loadout can make part of the bundle unnecessary.
         const buy = missing.filter((id) => used.has(id));
-        const costs = buy.map((id) => input.buyCost.get(id) ?? input.resale.get(id) ?? Infinity);
+        // An item's price assumes the owned parts it's made from; ones an earlier item used up have to be bought.
+        let { stock } = p;
+        const consumed = new Set<number>();
+        const costs = buy.map((id) => {
+          let cost = input.buyCost.get(id) ?? Infinity;
+          for (const part of input.parts.get(id) ?? []) {
+            let have: number;
+            // Equipment can be sold and bought back, so whether it's held is what counts.
+            if (part.id !== undefined) {
+              have = Number(p.held.has(part.id) && !consumed.has(part.id));
+              if (have) consumed.add(part.id);
+            } else {
+              have = Math.min(stock.get(part.name) ?? 0, part.quantity);
+              if (have) {
+                if (stock === p.stock) stock = new Map(stock);
+                stock.set(part.name, stock.get(part.name)! - have);
+              }
+            }
+            if (have < part.quantity) cost += (part.quantity - have) * (part.unitCost ?? Infinity);
+          }
+          return cost;
+        });
         const spent = costs.reduce((sum, c) => sum + c, 0);
         if (!Number.isFinite(spent)) continue;
-        const consumed = new Set(buy.flatMap((id) => input.consumes.get(id) ?? []));
         if ([...consumed].some((id) => used.has(id))) continue;
         const needed = input.sell ? stillNeeded(next, used) : used;
         const sell = input.sell ? [...p.worn].filter((id) => p.held.has(id) && !needed.has(id) && !consumed.has(id) && input.resale.has(id)) : [];
@@ -246,7 +286,7 @@ export const buildPath = (input: PathInput): Path => {
         const net = spent - refunded;
         moves.push({
           // Per billion gp, so ratios aren't so small that EPS swallows the differences.
-          buy, costs, sell, consumed: [...consumed], spent, refunded, net, ratio: ((gain - p.gain) * 1e9) / net, gain, next, target: { monster: o.monster, family: o.family },
+          buy, costs, sell, consumed: [...consumed], spent, refunded, net, ratio: ((gain - p.gain) * 1e9) / net, gain, next, stock, target: { monster: o.monster, family: o.family },
         });
       }
     }
@@ -255,7 +295,7 @@ export const buildPath = (input: PathInput): Path => {
   const bestMove = (p: Progress, within: Set<number> | null = null, proper = false): Move | null => movesFrom(p, within, proper)[0] ?? null;
 
   const take = (p: Progress, {
-    net, ratio, next, ...step
+    net, ratio, next, stock, ...step
   }: Move): Progress => {
     const nowHeld = new Set([...p.held, ...step.buy]);
     [...step.sell, ...step.consumed].forEach((id) => nowHeld.delete(id));
@@ -263,6 +303,7 @@ export const buildPath = (input: PathInput): Path => {
     return {
       held: nowHeld,
       worn: new Set([...p.worn, ...step.buy]),
+      stock,
       current: next,
       gain: step.gain,
       totalSpent,
@@ -281,17 +322,27 @@ export const buildPath = (input: PathInput): Path => {
     const remainder = rest.size ? bestMove(p, rest) : null;
     return remainder ? take(p, remainder) : p;
   };
+  /** `p` after `move`, or null when that changes nothing or any step of it goes over `budget`. */
+  const stepWithin = (p: Progress, move: Move, budget: number) => {
+    if (p.totalSpent + move.net > budget) return null;
+    const at = advance(p, move);
+    return at !== p && at.steps.slice(p.steps.length).every((s) => s.totalSpent <= budget) ? at : null;
+  };
   const completions = new Map<string, { from: number; steps: PathStep[]; end: Progress }>();
-  /** Follows the best step from `p` until nothing adds speed. */
-  const complete = (p: Progress): Progress => {
-    const key = keyOf(p);
+  /** Takes the best step that fits in `budget` from `p` until none adds speed. */
+  const complete = (p: Progress, budget = Infinity): Progress => {
+    // Only the gp left matters, so the same completion serves any spend so far that leaves as much.
+    const key = `${keyOf(p)}|${budget - p.totalSpent}`;
     if (!completions.has(key)) {
+      const firstFit = (from: Progress) => {
+        for (const move of movesFrom(from)) {
+          const at = stepWithin(from, move, budget);
+          if (at) return at;
+        }
+        return null;
+      };
       let end = p;
-      for (let move = bestMove(end); move; move = bestMove(end)) {
-        const next = advance(end, move);
-        if (next === end) break;
-        end = next;
-      }
+      for (let next = firstFit(end); next; next = firstFit(end)) end = next;
       completions.set(key, { from: p.totalSpent, steps: end.steps.slice(p.steps.length), end });
     }
     const { from, steps, end } = completions.get(key)!;
@@ -303,38 +354,75 @@ export const buildPath = (input: PathInput): Path => {
   };
 
   const begin: Progress = {
-    held, worn: inUse(current), current, gain: 0, totalSpent: 0, steps: [],
+    held, worn: inUse(current), stock: input.stock, current, gain: 0, totalSpent: 0, steps: [],
   };
-  let best = complete(begin);
-  if (input.beam) {
-    const horizon = Math.max(0, ...best.steps.map((s) => s.totalSpent));
-    const score = (p: Progress) => averageGain(p.steps, horizon);
+  /**
+   * From each of the `width` best paths so far, tries the steps `pick` chooses, finishing each within `budget` to
+   * compare them. Returns the best path found, or `top` if none beats it.
+   */
+  const beamSearch = (
+    width: number,
+    budget: number,
+    pick: (moves: Move[]) => Iterable<Move>,
+    better: (a: Progress, b: Progress) => boolean,
+    top: Progress,
+  ) => {
     let beam = [begin];
     while (beam.length) {
       const children = new Map<string, { at: Progress; end: Progress }>();
       for (const p of beam) {
-        for (const move of movesFrom(p).slice(0, input.beam.branching)) {
-          const at = advance(p, move);
-          if (at === p) continue;
-          const end = complete(at);
-          const key = keyOf(at);
-          if (!children.has(key) || score(end) > score(children.get(key)!.end)) children.set(key, { at, end });
+        for (const move of pick(movesFrom(p).filter((m) => p.totalSpent + m.net <= budget))) {
+          const at = stepWithin(p, move, budget);
+          if (!at) continue;
+          const end = complete(at, budget);
+          const key = `${keyOf(at)}|${budget === Infinity ? '' : at.totalSpent}`;
+          if (!children.has(key) || better(end, children.get(key)!.end)) children.set(key, { at, end });
         }
       }
-      const ranked = [...children.values()].sort((a, b) => score(b.end) - score(a.end));
-      if (ranked.length && score(ranked[0].end) > score(best) + EPS) best = ranked[0].end;
-      beam = ranked.slice(0, input.beam.width).map((c) => c.at);
+      const ranked = [...children.values()].sort((a, b) => (better(a.end, b.end) ? -1 : better(b.end, a.end) ? 1 : 0));
+      if (ranked.length && better(ranked[0].end, top)) top = ranked[0].end;
+      beam = ranked.slice(0, width).map((c) => c.at);
+    }
+    return top;
+  };
+
+  let steps: PathStep[];
+  let everyBudget: PathStep[] | undefined;
+  if (!input.beam) steps = complete(begin).steps;
+  else {
+    const { width, branching } = input.beam;
+    everyBudget = input.everyBudget ?? (() => {
+      const greedy = complete(begin);
+      const horizon = Math.max(0, ...greedy.steps.map((s) => s.totalSpent));
+      const score = (p: Progress) => averageGain(p.steps, horizon);
+      return beamSearch(width, Infinity, (moves) => moves.slice(0, branching), (a, b) => score(a) > score(b) + EPS, greedy).steps;
+    })();
+    steps = everyBudget;
+
+    // The plan for every budget at once rarely fits a given budget best: its cheap early steps can use up gp that one
+    // bigger step would have used better.
+    const { budget } = input;
+    if (budget != null) {
+      const top = beamSearch(
+        width,
+        budget,
+        // Value per gp, and the biggest gains that fit, which value per gp would only reach late if at all.
+        (moves) => new Set([...moves.slice(0, branching), ...[...moves].sort((a, b) => b.gain - a.gain || a.net - b.net).slice(0, branching)]),
+        (a, b) => (Math.abs(a.gain - b.gain) > EPS ? a.gain > b.gain : a.totalSpent < b.totalSpent),
+        complete(begin, budget),
+      );
+      if (top.gain > gainWithin({ steps }, budget) + EPS) ({ steps } = complete(top));
     }
   }
 
   const everything = new Set(options.flat(2).flatMap((o) => o.items));
   return {
-    ...timing, start, steps: best.steps, bis: monsters.map((_, i) => strip(bestOverall(i, bestWith(i, everything)))),
+    ...timing, start, steps, bis: monsters.map((_, i) => strip(bestOverall(i, bestWith(i, everything)))), everyBudget,
   };
 };
 
-/** Budgets below this count as this, so the log scale below has somewhere to start. */
-const SMALLEST_BUDGET = 1e6;
+/** gp come in whole coins, so this is the smallest budget there is; it gives the log scale below somewhere to start. */
+const SMALLEST_BUDGET = 1;
 
 /**
  * Mean gain over budgets up to `horizon` gp on a log scale, so every doubling of the budget counts the same: a path
@@ -377,7 +465,10 @@ export const killSeconds = ({ encounters, phases }: Pick<Path, 'encounters' | 'p
 export const statesAfter = (path: Path, n: number) => (n > 0 ? path.steps[n - 1].states : path.start);
 
 /** How many steps of the path fit in `budget` gp, net of sales. */
-export const stepsWithin = (path: Path, budget: number | null) => {
+export const stepsWithin = (path: Pick<Path, 'steps'>, budget: number | null) => {
   const over = budget === null ? -1 : path.steps.findIndex((s) => s.totalSpent > budget);
   return over === -1 ? path.steps.length : over;
 };
+
+/** How much faster the steps that fit in `budget` gp make you. */
+export const gainWithin = (path: Pick<Path, 'steps'>, budget: number | null) => path.steps[stepsWithin(path, budget) - 1]?.gain ?? 0;

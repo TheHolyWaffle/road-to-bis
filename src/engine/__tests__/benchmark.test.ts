@@ -2,7 +2,9 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import recommended from '../../data/recommended-equipment.json';
 import { monsterLabel } from '../build-player';
-import { buildCandidates, consumedParts, resaleValues } from '../candidates';
+import {
+  buildCandidates, buyBackCosts, ownedParts, resaleValues,
+} from '../candidates';
 import { itemById } from '../items';
 import { buildPath } from '../path';
 import { indexPrices } from '../prices';
@@ -124,7 +126,7 @@ describe.skipIf(!existsSync(mappingFile) || !process.env.BENCHMARK)('benchmark a
     lines.splice(1, 0, `Best-in-slot items in the wiki's tables for that style: ${sum(1)}/${sum(2)} (${sum(0)} in the top tier)`);
     const resale = resaleValues(ownedIds, prices, upgrades);
     const path = buildPath({
-      monsters, frontiers: out.frontiers, ownedIds, buyCost: new Map(candidates), resale, consumes: consumedParts(upgrades, ownedIds), sell: true,
+      monsters, frontiers: out.frontiers, ownedIds, buyCost: new Map([...buyBackCosts(ownedIds, prices), ...candidates]), resale, ...ownedParts(upgrades, ownedIds, prices, quantities, false), sell: true,
     });
     lines.push('', '=== Path');
     path.steps.forEach((s, i) => {

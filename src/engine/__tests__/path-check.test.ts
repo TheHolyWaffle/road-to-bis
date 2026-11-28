@@ -1,10 +1,12 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { monsterLabel } from '../build-player';
-import { buildCandidates, consumedParts, resaleValues } from '../candidates';
+import {
+  buildCandidates, buyBackCosts, ownedParts, resaleValues,
+} from '../candidates';
 import { itemById } from '../items';
 import {
-  averageGain, buildPath, killSeconds, type Path, type PathInput, stepsWithin,
+  averageGain, buildPath, gainWithin, killSeconds, type Path, type PathInput,
 } from '../path';
 import { indexPrices } from '../prices';
 import { runSearch, type SearchOutput } from '../search';
@@ -23,10 +25,19 @@ const BEAMS = [{ width: 2, branching: 2 }, { width: 4, branching: 4 }, { width: 
 const m = (gp: number) => `${(gp / 1e6).toFixed(1)}M`;
 const pct = (g: number) => `${(g * 100).toFixed(1)}%`;
 
-/** The gain after the steps that fit in `budget`. */
-const gainAt = (path: Path, budget: number) => {
-  const n = stepsWithin(path, budget);
-  return n ? path.steps[n - 1].gain : 0;
+/** Each budget's own plan, as `at` lines read, and the slowest one's time once the search for every budget is done. */
+const budgetRow = (base: PathInput) => {
+  let slowest = 0;
+  const { everyBudget } = buildPath({ ...base, beam: BEAMS[1] });
+  const gains = BUDGETS.map((b) => {
+    const t = performance.now();
+    const gain = gainWithin(buildPath({
+      ...base, beam: BEAMS[1], budget: b, everyBudget,
+    }), b);
+    slowest = Math.max(slowest, performance.now() - t);
+    return `${m(b)} ${pct(gain)}`;
+  });
+  return `planned for each budget (beam ${BEAMS[1].width}x${BEAMS[1].branching}, slowest ${(slowest / 1000).toFixed(1)}s): ${gains.join(', ')}`;
 };
 
 const BOSSES: [name: string, version?: string][] = [
@@ -66,9 +77,9 @@ const prepare = async (bosses: [name: string, version?: string][]) => {
     monsters,
     frontiers: out.frontiers,
     ownedIds,
-    buyCost: new Map(candidates),
+    buyCost: new Map([...buyBackCosts(ownedIds, prices), ...candidates]),
     resale: resaleValues(ownedIds, prices, upgrades),
-    consumes: consumedParts(upgrades, ownedIds),
+    ...ownedParts(upgrades, ownedIds, prices, quantities, false),
     sell: false,
   };
   return { input, frontiers: out.frontiers };
@@ -99,7 +110,7 @@ describe.skipIf(!existsSync(mappingFile) || !process.env.PATH_CHECK)('path again
         const below = envelope(s.totalSpent) - s.gain;
         lines.push(`${String(i + 1).padStart(3)}. ${m(s.totalSpent).padStart(8)} ${pct(s.gain).padStart(6)}${base.sell ? '' : `  curve ${pct(envelope(s.totalSpent)).padStart(6)}${below > 1e-3 ? ` (${pct(below)} below)` : ''}`}  buy ${names(s.buy)} (${m(s.spent)})${s.sell.length ? `  sell ${names(s.sell)} (${m(s.refunded)})` : ''}`);
       });
-      lines.push(`     at ${BUDGETS.map((b) => `${m(b)} ${pct(gainAt(path, b))}`).join(', ')}`);
+      lines.push(`     at ${BUDGETS.map((b) => `${m(b)} ${pct(gainWithin(path, b))}`).join(', ')}`);
     };
 
     for (const sell of [false, true]) {
@@ -119,6 +130,7 @@ describe.skipIf(!existsSync(mappingFile) || !process.env.PATH_CHECK)('path again
         const b = buildPath({ ...base, beam });
         describe(`beam ${beam.width}x${beam.branching}`, b, horizon, performance.now() - t);
       }
+      lines.push('', budgetRow(base));
     }
     writeFileSync(reportFile, `${lines.join('\n')}\n`);
     expect(greedy.steps.length).toBeGreaterThan(0);
@@ -132,12 +144,13 @@ describe.skipIf(!existsSync(mappingFile) || !process.env.PATH_CHECK)('path again
       let t = performance.now();
       const greedy = buildPath(base);
       const horizon = Math.max(0, ...greedy.steps.map((s) => s.totalSpent));
-      const row = (label: string, path: Path, ms: number) => lines.push(`${sell ? 'sell' : 'keep'} ${label.padEnd(10)} ${String(path.steps.length).padStart(3)} steps, ${m(path.steps.at(-1)?.totalSpent ?? 0).padStart(8)}, average up to ${m(horizon)} ${pct(averageGain(path.steps, horizon)).padStart(6)}, ${(ms / 1000).toFixed(1)}s  at ${BUDGETS.map((b) => `${m(b)} ${pct(gainAt(path, b))}`).join(', ')}`);
+      const row = (label: string, path: Path, ms: number) => lines.push(`${sell ? 'sell' : 'keep'} ${label.padEnd(10)} ${String(path.steps.length).padStart(3)} steps, ${m(path.steps.at(-1)?.totalSpent ?? 0).padStart(8)}, average up to ${m(horizon)} ${pct(averageGain(path.steps, horizon)).padStart(6)}, ${(ms / 1000).toFixed(1)}s  at ${BUDGETS.map((b) => `${m(b)} ${pct(gainWithin(path, b))}`).join(', ')}`);
       row('greedy', greedy, performance.now() - t);
       for (const beam of BEAMS.slice(0, 2)) {
         t = performance.now();
         row(`beam ${beam.width}x${beam.branching}`, buildPath({ ...base, beam }), performance.now() - t);
       }
+      lines.push(`${sell ? 'sell' : 'keep'} ${budgetRow(base)}`);
     }
     writeFileSync(reportFile, `${readFileSync(reportFile, 'utf8')}${lines.join('\n')}\n`);
   }, 1_800_000);
