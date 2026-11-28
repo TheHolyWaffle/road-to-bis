@@ -183,12 +183,12 @@ export class Evaluator implements Scorer {
   }
 }
 
-/** Score minus `lambda` per gp of the loadout's cost, so a sweep over lambda traces how score grows with spending. */
+/** Score minus `lambda` per gp the loadout costs, so a sweep over lambda traces how score grows with spending. */
 export class Penalized implements Scorer {
-  constructor(private readonly ev: Scorer, private readonly costOf: CostOf, private readonly lambda: number) {}
+  constructor(private readonly ev: Scorer, private readonly cost: (st: LoadoutState) => number, private readonly lambda: number) {}
 
   score(st: LoadoutState) {
-    return this.ev.score(st) - this.lambda * loadoutCost(st, this.costOf);
+    return this.ev.score(st) - this.lambda * this.cost(st);
   }
 }
 

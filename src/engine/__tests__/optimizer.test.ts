@@ -30,8 +30,8 @@ describe('optimizer', () => {
     const tbow = itemById(20997)!;
     const costOf = (p: typeof tbow) => (p.id === tbow.id ? 1.5e9 : 0);
     const pool = buildPool([...owned, tbow], 'ranged', maxedSettings, costOf);
-    const stingy = optimize(pool, new Penalized(ev, costOf, 1e-6))!;
-    const generous = optimize(pool, new Penalized(ev, costOf, 1e-12))!;
+    const stingy = optimize(pool, new Penalized(ev, (st) => loadoutCost(st, costOf), 1e-6))!;
+    const generous = optimize(pool, new Penalized(ev, (st) => loadoutCost(st, costOf), 1e-12))!;
     console.log('stingy', describeRef(toRef(stingy.state)), '| generous', describeRef(toRef(generous.state)));
     expect(loadoutCost(stingy.state, costOf)).toBe(0);
     expect(generous.state.equipment.weapon?.id).toBe(tbow.id);

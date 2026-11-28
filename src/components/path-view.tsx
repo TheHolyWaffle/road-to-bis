@@ -144,8 +144,10 @@ export const PathView = ({
             Sell what&apos;s replaced
             <InfoTip label="sell what's replaced">
               Gear sells back on the GE for close to what you paid, so a stepping stone costs little more than the 2% GE
-              tax. On: once no style at any monster still uses an item, and no better setup on its way to best in slot
-              does, the path sells it to pay for the next step. Gear the path never used, like spec weapons, is never sold.
+              tax and the gap between buy and sell prices. On: once no style at any monster still uses an item, and no
+              better setup on its way to best in slot does, the path sells it to pay for the next step. Gear the path
+              never used, like spec weapons, is never sold. Changing this needs a new search, as the search looks for
+              setups that are cheap after selling.
             </InfoTip>
           </label>
           <label className="budget-inline">
@@ -159,13 +161,14 @@ export const PathView = ({
             />
             <span className="unit">M gp</span>
             <InfoTip label="budget">
-              How much gp you can put in, after selling what the path replaces. Steps past your budget are dimmed, and
-              the table above shows your setups once you&apos;ve done them.
+              How much gp you can put in, after selling what the path replaces. The steps within it are planned for that
+              amount, so they can differ from the plan without a budget. Steps past your budget are dimmed, and the
+              table above shows your setups once you&apos;ve done them.
             </InfoTip>
           </label>
         </div>
       </header>
-      {stale && <p className="notice">Your gear, levels or monsters changed since this search. Run it again to update.</p>}
+      {stale && <p className="notice">Your gear, levels, monsters or selling choice changed since this search. Run it again to update.</p>}
       <p className="hint">
         {last
           ? `Every step to best in slot, best value first: ${plural(path.steps.length, 'step')}, ${formatGp(last.totalSpent).text} gp in all, ${formatPercent(last.gain)} faster on average.`

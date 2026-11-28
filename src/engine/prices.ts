@@ -6,8 +6,15 @@ import type { PriceVia, UpgradePart } from './types';
 
 const API = 'https://prices.runescape.wiki/api/v1/osrs';
 
+export interface GePrice {
+  /** What buying takes: the latest instant-buy price. */
+  buy: number;
+  /** What selling gets, before tax: the latest instant-sell price. */
+  sell: number;
+}
+
 export interface PriceIndex {
-  byId: Map<number, number>;
+  byId: Map<number, GePrice>;
   idByName: Map<string, number>;
 }
 
@@ -23,10 +30,9 @@ export const loadPrices = async (): Promise<PriceIndex> => {
 };
 
 export const indexPrices = (mapping: MappingEntry[], latest: Record<string, LatestEntry>): PriceIndex => {
-  const byId = new Map<number, number>();
+  const byId = new Map<number, GePrice>();
   for (const [id, { high, low }] of Object.entries(latest)) {
-    const price = high && low ? (high + low) / 2 : high ?? low;
-    if (price) byId.set(Number(id), Math.round(price));
+    if (high || low) byId.set(Number(id), { buy: (high || low)!, sell: (low || high)! });
   }
   return {
     byId,
@@ -72,10 +78,13 @@ export type OwnedQuantities = Map<string, number>;
 export interface PriceQuote {
   cost: number;
   via: PriceVia;
+  /** For a GE item, what it sells for before tax. */
+  sell?: number;
   /** What a crafted item is made from, flattened across nested recipes. */
   parts?: UpgradePart[];
 }
 
+/** An item name's GE prices, trying its uncharged and other plain variants. */
 const geByName = (name: string, idx: PriceIndex) => {
   const lower = name.toLowerCase();
   for (const variant of NAME_VARIANTS) {
@@ -129,7 +138,7 @@ const acquire = (name: string, quantity: number, idx: PriceIndex, owned: OwnedQu
   if (lower === 'coins') return { cost: quantity, parts: [{ name, quantity, source: 'buy' }] };
   if ((owned.get(lower) ?? 0) >= quantity) return { cost: 0, parts: [{ name, quantity, source: 'owned' }] };
   const price = geByName(name, idx);
-  if (price) return { cost: price * quantity, parts: [{ name, quantity, source: 'buy' }] };
+  if (price) return { cost: price.buy * quantity, parts: [{ name, quantity, source: 'buy' }] };
   // A part with recipes that can't be made on this route (it would loop back on itself) rules the route out; only a
   // part with no recipe at all is untradeable and earned.
   if (RECIPES.has(lower)) return make(name, quantity, idx, owned, depth, visiting);
@@ -164,20 +173,30 @@ const mergeParts = (parts: UpgradePart[]) => {
 };
 
 /**
+ * What `quantity` of a recipe part costs when you don't own any, and whether getting it means earning an untradeable.
+ * Null when it can't be got at all.
+ */
+export const partCost = (name: string, quantity: number, idx: PriceIndex): { cost: number; earned: boolean } | null => {
+  const got = acquire(name, quantity, idx, new Map(), 0, new Set());
+  return got && { cost: got.cost, earned: got.parts.some((p) => p.source === 'earned') };
+};
+
+/**
  * Prices an item at its GE price, or else at the cheapest way to make it from tradeable parts, where parts in your
  * bank cost nothing. Returns null for an untradeable item with no recipe.
  */
 export const priceFor = (piece: EquipmentPiece, idx: PriceIndex, owned: OwnedQuantities = new Map()): PriceQuote | null => {
+  const ge = (p: GePrice): PriceQuote => ({ cost: p.buy, sell: p.sell, via: 'ge' });
   for (const id of priceableIds(piece)) {
     const p = idx.byId.get(id);
-    if (p) return { cost: p, via: 'ge' };
+    if (p) return ge(p);
   }
   const imbuedBase = piece.name.match(/^(.*?) ?\(i\)$/)?.[1];
   if (imbuedBase && owned.has(imbuedBase.toLowerCase())) {
     return { cost: 0, via: 'imbue', parts: [{ name: imbuedBase, quantity: 1, source: 'owned' }] };
   }
-  const ge = geByName(piece.name, idx);
-  if (ge) return { cost: ge, via: 'ge' };
+  const byName = geByName(piece.name, idx);
+  if (byName) return ge(byName);
 
   const made = make(piece.name, 1, idx, owned, 0, new Set());
   if (!made) return null;

@@ -8,10 +8,12 @@ import { MonstersStep } from './components/monsters-step';
 import { PathView } from './components/path-view';
 import { ProgressPanel } from './components/progress-panel';
 import { StatsStep } from './components/stats-step';
-import { buildCandidates, consumedParts, resaleValues } from './engine/candidates';
+import {
+  buildCandidates, buyBackCosts, ownedParts, type PartUse, resaleValues,
+} from './engine/candidates';
 import { Potion } from './engine/dps-calc';
 import {
-  type Path, type PathInput, statesAfter, stepsWithin,
+  afterTax, type Path, type PathInput, type PathStep, statesAfter, stepsWithin,
 } from './engine/path';
 import type { PathReply } from './engine/path-worker';
 import { loadPrices, type PriceIndex } from './engine/prices';
@@ -56,9 +58,13 @@ interface SearchRun {
   ownedIds: number[];
   /** What each item you don't own cost when the search ran. */
   candidates: [id: number, cost: number][];
+  /** What buying back each tradeable item you own costs. */
+  buyBack: [id: number, cost: number][];
   /** GE prices of tradeable items, owned or not, for selling what the path replaces. */
   resale: [id: number, price: number][];
-  consumes: [id: number, parts: number[]][];
+  /** The owned parts each crafted upgrade's price assumes, and how many of each material you own. */
+  parts: [id: number, parts: PartUse[]][];
+  stock: [name: string, quantity: number][];
   signature: string;
   durationMs: number;
 }
@@ -76,6 +82,13 @@ export const App = () => {
   const [options, setOptions] = usePersisted('search-options', DEFAULT_OPTIONS);
   const [budgetM, setBudgetM] = usePersisted<number | null>('budget-m', null);
   const [sell, setSell] = usePersisted('sell-replaced', true);
+  const budget = budgetM === null ? null : budgetM * 1e6;
+  // Planning for a budget takes seconds, so it waits for typing to stop.
+  const [plannedBudget, setPlannedBudget] = useState(budget);
+  useEffect(() => {
+    const timer = setTimeout(() => setPlannedBudget(budget), 500);
+    return () => clearTimeout(timer);
+  }, [budget]);
 
   const [prices, setPrices] = useState<PriceState>({ status: 'loading' });
   const [run, setRun] = useState<SearchRun | null>(null);
@@ -127,8 +140,8 @@ export const App = () => {
 
   // Monster weights only affect the path, so changing them rebuilds it without a new search.
   const signature = useMemo(
-    () => JSON.stringify([ownedIds, settings, monsters.map((m) => [m.key, m.families, m.onTask, m.scaling]), candidates?.map((u) => u.key)]),
-    [ownedIds, settings, monsters, candidates],
+    () => JSON.stringify([ownedIds, settings, monsters.map((m) => [m.key, m.families, m.onTask, m.scaling]), candidates?.map((u) => u.key), sell]),
+    [ownedIds, settings, monsters, candidates, sell],
   );
 
   const canRun = (() => {
@@ -143,8 +156,14 @@ export const App = () => {
     if (!candidates || prices.status !== 'ready') return;
     poolRef.current?.terminate();
     const costs = candidates.map((u) => [u.itemIds[0], u.cost] as [number, number]);
+    const resale = [...resaleValues(ownedIds, prices.index, candidates)];
+    const owned = new Set(ownedIds);
     const ctx: SearchContext = {
-      ownedIds, settings, monsters, candidates: costs,
+      ownedIds,
+      settings,
+      monsters,
+      candidates: costs,
+      sales: sell ? resale.filter(([id]) => owned.has(id)).map(([id, price]) => [id, afterTax(price)]) : [],
     };
     const pool = new WorkerPool(ctx);
     poolRef.current = pool;
@@ -156,13 +175,16 @@ export const App = () => {
     setStartedAt(started);
     try {
       const out = await runSearch({ monsters, ownedIds }, pool.run, (p) => setProgress(p));
+      const { parts, stock } = ownedParts(candidates, ownedIds, prices.index, ownedQuantities, options.includeEarned);
       const finished: SearchRun = {
         out,
         monsters,
         ownedIds,
         candidates: costs,
-        resale: [...resaleValues(ownedIds, prices.index, candidates)],
-        consumes: [...consumedParts(candidates, ownedIds)],
+        buyBack: buyBackCosts(ownedIds, prices.index),
+        resale,
+        parts: [...parts],
+        stock: [...stock],
         signature,
         durationMs: Date.now() - started,
       };
@@ -181,7 +203,8 @@ export const App = () => {
     setRunning(false);
   };
 
-  const pathInput = useMemo((): PathInput | null => {
+  // Everything but the budget, so that changing the budget can reuse the search for every budget at once.
+  const baseInput = useMemo((): PathInput | null => {
     if (!run) return null;
     // Weights and how phases group into fights only affect the path, so they're taken from the current setup.
     const current = new Map(monsters.map((m) => [m.key, m]));
@@ -197,12 +220,15 @@ export const App = () => {
       }),
       frontiers: run.out.frontiers,
       ownedIds: run.ownedIds,
-      buyCost: keep(run.candidates),
+      buyCost: new Map([...run.buyBack, ...keep(run.candidates)]),
       resale: new Map(run.resale.filter(([id]) => !excluded.has(id) || owned.has(id))),
-      consumes: keep(run.consumes),
+      parts: keep(run.parts),
+      stock: new Map(run.stock),
       sell,
     };
   }, [run, monsters, excludedIds, sell]);
+  const pathInput = useMemo(() => baseInput && { ...baseInput, budget: plannedBudget }, [baseInput, plannedBudget]);
+  const everyBudget = useRef<{ input: PathInput; steps: PathStep[] } | null>(null);
 
   // Built in a worker, as the wider search for a better order can take seconds. The last path stays up meanwhile.
   const [planned, setPlanned] = useState<{ input: PathInput; path: Path; refined: boolean } | null>(null);
@@ -214,15 +240,20 @@ export const App = () => {
     const worker = new Worker(new URL('./engine/path-worker.ts', import.meta.url), { type: 'module' });
     worker.onmessage = (e: MessageEvent<PathReply>) => {
       if ('error' in e.data) setError(e.data.error);
-      else setPlanned({ input: pathInput, path: e.data.path, refined: e.data.refined });
+      else {
+        const { path: built, refined } = e.data;
+        if (built.everyBudget) everyBudget.current = { input: baseInput!, steps: built.everyBudget };
+        setPlanned({ input: pathInput, path: built, refined });
+      }
     };
-    worker.postMessage(pathInput);
+    const known = everyBudget.current?.input === baseInput ? everyBudget.current.steps : undefined;
+    worker.postMessage({ ...pathInput, everyBudget: known } satisfies PathInput);
     return () => worker.terminate();
-  }, [pathInput]);
+  }, [pathInput, baseInput]);
   const path = pathInput ? planned?.path ?? null : null;
   const refining = !!pathInput && !(planned?.input === pathInput && planned.refined);
 
-  const within = path ? stepsWithin(path, budgetM === null ? null : budgetM * 1e6) : 0;
+  const within = path ? stepsWithin(path, budget) : 0;
 
   return (
     <div className="app">
